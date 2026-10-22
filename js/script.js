@@ -13,8 +13,8 @@ const WHATSAPP = "584125735490";
    Si los dejas vacíos, la página funciona con los productos
    escritos en este archivo (PRODUCTOS y EXTRAS), como antes.
    ========================================================= */
-const SUPABASE_URL = "https://scjlyiheabpapvyftbui.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_I2yc8R0adtwgP6f6lZpVHA_jo9H5n7k";
+const SUPABASE_URL = "https://befnzpcyzvdqewkgkjcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_l7WgfoP48nRZHKr0FMnVRw_meRlp3eR";
 
 /* =========================================================
    TASA DEL DÓLAR (BCV) — ACTUALIZACIÓN AUTOMÁTICA

@@ -1,0 +1,1225 @@
+/* =========================================================
+   1. PALETA DE COLORES — cambia estos valores y toda la
+      página se actualiza. Inspirada en el lazo lavanda y
+      las flores amarillas de Bloom & Co.
+   ========================================================= */
+:root{
+  --fondo:          #F8F6FD;  /* fondo general (blanco lavanda) */
+  --fondo-alt:      #EEE9FA;  /* secciones alternas */
+  --texto:          #2E2648;  /* texto principal (ciruela oscuro) */
+  --texto-suave:    #655D80;  /* texto secundario */
+  --principal:      #6A51B8;  /* botones y acentos (lavanda intenso) */
+  --principal-hover:#553E9C;
+  --lavanda:        #A99BE6;  /* lazo, detalles */
+  --amarillo:       #F6C21C;  /* girasol */
+  --amarillo-suave: #FFE68A;
+  --blanco:         #FFFFFF;
+  --superficie:     #FFFFFF;  /* tarjetas, campos y botones redondos */
+  --sobre-principal:#FFFFFF;  /* texto encima de botones lavanda */
+  --sobre-amarillo: #2E2648;  /* texto encima del amarillo */
+  --oscuro:         #2E2648;  /* bloque de promoción, pie y avisos */
+  --sobre-oscuro:   #F8F6FD;
+  --sombra:         rgba(46,38,72,.12);
+  --borde:          #DED6F5;
+
+  --fuente-titulos: "Marcellus", Georgia, serif;
+  --fuente-texto:   "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  --fuente-mano:    "Caveat", "Comic Sans MS", cursive;
+  --radio: 20px;
+  --ancho: 1200px;
+  color-scheme: light;
+}
+
+/* =========================================================
+   1b. MODO OSCURO — se activa si el cliente lo elige, o en
+       "Automático" si su teléfono/PC está en modo oscuro.
+       Si cambias un color aquí, cámbialo en los DOS bloques.
+   ========================================================= */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fondo:#15111E; --fondo-alt:#1E1830; --texto:#F1EDFA; --texto-suave:#B5ACCD;
+    --principal:#A891F2; --principal-hover:#BDAAF7; --lavanda:#7D6BC4;
+    --amarillo:#F6C21C; --amarillo-suave:#F6D569; --borde:#342B4D;
+    --superficie:#221B35; --sobre-principal:#15111E; --sobre-amarillo:#211A33;
+    --oscuro:#0D0A14; --sobre-oscuro:#F1EDFA; --sombra:rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --fondo:#15111E; --fondo-alt:#1E1830; --texto:#F1EDFA; --texto-suave:#B5ACCD;
+  --principal:#A891F2; --principal-hover:#BDAAF7; --lavanda:#7D6BC4;
+  --amarillo:#F6C21C; --amarillo-suave:#F6D569; --borde:#342B4D;
+  --superficie:#221B35; --sobre-principal:#15111E; --sobre-amarillo:#211A33;
+  --oscuro:#0D0A14; --sobre-oscuro:#F1EDFA; --sombra:rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+
+/* =========================================================
+   2. BASE
+   ========================================================= */
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;overflow-x:clip;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;background:var(--fondo);color:var(--texto);font-family:var(--fuente-texto);font-size:1.0625rem;line-height:1.6}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--fuente-titulos);font-weight:400;line-height:1.15;margin:0 0 .5em}
+h2{font-size:clamp(1.9rem,4vw,2.8rem)}
+p{margin:0 0 1em}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--principal);outline-offset:3px;border-radius:6px}
+.contenedor{max-width:var(--ancho);margin:0 auto;padding:0 20px}
+.seccion{padding:84px 0}
+.seccion-alt{background:var(--fondo-alt)}
+.intro{max-width:58ch;margin-bottom:40px;color:var(--texto-suave)}
+.nota-mano{font-family:var(--fuente-mano);font-size:1.7rem;line-height:1.2;color:var(--principal)}
+.img-cubrir{width:100%;height:100%;object-fit:cover}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:14px 28px;font-weight:700;text-decoration:none;transition:background .2s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-principal{background:var(--principal);color:var(--sobre-principal)}
+.btn-principal:hover{background:var(--principal-hover)}
+.btn-borde{background:transparent;color:var(--texto);box-shadow:inset 0 0 0 2px var(--texto)}
+.btn-borde:hover{background:var(--texto);color:var(--fondo)}
+
+/* =========================================================
+   3. BARRA DE AVISO Y ENCABEZADO
+   ========================================================= */
+.aviso{background:var(--principal);color:var(--sobre-principal);text-align:center;font-size:.9rem;padding:8px 16px}
+.encabezado{position:sticky;top:0;z-index:50;background:var(--fondo);border-bottom:1px solid var(--borde)}
+.encabezado .contenedor{display:flex;align-items:center;justify-content:space-between;height:76px;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--texto)}
+.logo svg{width:40px;height:30px}
+.logo-texto{font-family:var(--fuente-titulos);font-size:1.6rem;letter-spacing:.32em;line-height:1}
+.logo-sub{display:block;font-family:var(--fuente-texto);font-size:.62rem;letter-spacing:.12em;color:var(--texto-suave);margin-top:4px}
+.menu{display:flex;gap:28px;list-style:none;margin:0;padding:0}
+.menu a{text-decoration:none;font-weight:600}
+.menu a:hover{color:var(--principal)}
+.acciones{display:flex;align-items:center;gap:10px}
+.icono-btn{position:relative;background:var(--superficie);border:1px solid var(--borde);width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:var(--texto)}
+.icono-btn svg{width:22px;height:22px}
+.contador{position:absolute;top:-4px;right:-4px;background:var(--amarillo);color:var(--sobre-amarillo);font-size:.75rem;font-weight:800;min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 5px}
+.contador.vacio{display:none}
+.solo-movil{display:none}
+@media (max-width:860px){
+  .menu{position:fixed;inset:76px 0 auto 0;flex-direction:column;background:var(--fondo);padding:20px;gap:18px;border-bottom:1px solid var(--borde);transform:translateY(-140%);transition:transform .3s}
+  .menu.abierto{transform:none}
+  .solo-movil{display:grid}
+  .logo-sub{display:none}
+}
+/* Teléfonos pequeños */
+@media (max-width:400px){
+  .contenedor{padding:0 16px}
+  .encabezado .contenedor{gap:8px}
+  .logo svg{width:32px;height:24px}
+  .logo-texto{font-size:1.3rem;letter-spacing:.2em}
+  .icono-btn{width:40px;height:40px}
+  .acciones{gap:6px}
+  .seccion{padding:60px 0}
+  .portada{padding:36px 0 60px}
+  .portada-botones .btn{flex:1 1 100%;justify-content:center}
+  .promo{border-radius:24px}
+  .modal{padding:0;place-items:end center}
+  .modal-caja{max-height:92vh;border-radius:var(--radio) var(--radio) 0 0}
+  .modal-info{padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+  .modal-info h2{font-size:1.6rem}
+}
+/* En pantallas táctiles, sin efecto de zoom al pasar el dedo */
+@media (hover:none){.producto-img:hover img{transform:none}}
+
+/* =========================================================
+   4. PORTADA
+   ========================================================= */
+.portada{padding:56px 0 84px;overflow:hidden}
+.portada .contenedor{display:grid;grid-template-columns:1.15fr 1fr;gap:56px;align-items:center}
+.portada .nota-mano{margin-bottom:12px;transform:rotate(-3deg);display:inline-block}
+.portada h1{font-size:clamp(2.6rem,6vw,4.6rem);letter-spacing:-.01em}
+.portada p{font-size:1.15rem;color:var(--texto-suave);max-width:44ch}
+.portada-botones{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.portada-fotos{position:relative;display:grid;grid-template-columns:1fr .7fr;gap:16px;align-items:end}
+.portada-fotos .foto-grande{aspect-ratio:3/4.4;border-radius:200px 200px var(--radio) var(--radio);overflow:hidden;background:var(--fondo-alt)}
+.portada-fotos .foto-chica{aspect-ratio:3/4;border-radius:var(--radio);overflow:hidden;margin-bottom:40px;background:var(--fondo-alt)}
+.lazo{position:absolute;top:18px;right:4px;background:var(--amarillo);color:var(--sobre-amarillo);font-weight:800;padding:10px 18px;border-radius:999px;transform:rotate(5deg);font-size:.95rem}
+@media (max-width:860px){.portada .contenedor{grid-template-columns:1fr}.portada-fotos{max-width:480px;margin:0 auto;width:100%}}
+
+/* =========================================================
+   5. VENTAJAS
+   ========================================================= */
+.ventajas{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:36px;padding:44px 0;border-top:1px solid var(--borde);border-bottom:1px solid var(--borde)}
+.ventaja{display:flex;gap:16px;align-items:flex-start}
+.ventaja-icono{flex:none;width:52px;height:52px;border-radius:50%;background:var(--principal);color:var(--sobre-principal);display:grid;place-items:center}
+.ventaja-icono svg{width:26px;height:26px}
+.ventaja h3{font-family:var(--fuente-texto);font-weight:800;font-size:1.05rem;margin:4px 0 2px}
+.ventaja p{color:var(--texto-suave);margin:0;font-size:.97rem}
+
+/* =========================================================
+   6. CATÁLOGO
+   ========================================================= */
+.filtros{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.filtro{border:2px solid var(--principal);background:transparent;color:var(--principal);padding:8px 18px;border-radius:999px;font-weight:700}
+.filtro[aria-pressed="true"]{background:var(--principal);color:var(--sobre-principal)}
+.buscador{width:100%;max-width:380px;padding:12px 18px;border-radius:999px;border:1px solid var(--borde);background:var(--superficie);font:inherit;color:var(--texto);margin-bottom:32px}
+.grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:28px}
+.producto{background:var(--superficie);border-radius:var(--radio);overflow:hidden;display:flex;flex-direction:column}
+.producto-img{aspect-ratio:4/5;position:relative;cursor:pointer;background:var(--fondo-alt);border:0;padding:0;overflow:hidden}
+.producto-img img{transition:transform .5s}
+.producto-img:hover img{transform:scale(1.04)}
+.etiqueta{position:absolute;top:14px;left:14px;background:var(--amarillo);color:var(--sobre-amarillo);font-size:.8rem;font-weight:800;padding:5px 12px;border-radius:999px}
+.producto-info{padding:20px;display:flex;flex-direction:column;flex:1}
+.producto-info h3{font-size:1.35rem;margin-bottom:6px}
+.producto-info p{color:var(--texto-suave);font-size:.95rem;flex:1}
+.producto-pie{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.precio{font-weight:800;font-size:1.2rem;line-height:1.2}
+.precio-bs{display:block;font-size:.85rem;font-weight:700;color:var(--principal);margin-top:2px}
+.precio small{display:block;font-size:.78rem;font-weight:600;color:var(--texto-suave)}
+.btn-agregar{background:var(--principal);color:var(--sobre-principal);border:0;border-radius:999px;padding:10px 18px;font-weight:700}
+.btn-agregar:hover{background:var(--principal-hover)}
+.sin-resultados{grid-column:1/-1;text-align:center;padding:40px;color:var(--texto-suave)}
+
+/* =========================================================
+   7. PROMOCIÓN
+   ========================================================= */
+.promo{background:var(--oscuro);color:var(--sobre-oscuro);border:1px solid var(--borde);border-radius:32px;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.promo-texto{padding:56px 48px;display:flex;flex-direction:column;justify-content:center}
+.promo-texto .nota-mano{color:var(--amarillo-suave)}
+.promo-texto h2{color:var(--sobre-oscuro)}
+.promo-texto p{opacity:.85;max-width:42ch}
+.promo-texto ul{list-style:none;padding:0;margin:0 0 28px;display:flex;flex-wrap:wrap;gap:8px}
+.promo-texto li{border:1px solid color-mix(in srgb,var(--sobre-oscuro) 35%,transparent);border-radius:999px;padding:6px 14px;font-size:.92rem}
+.promo-texto .btn{align-self:flex-start;background:var(--amarillo);color:var(--sobre-amarillo)}
+.promo-texto .btn:hover{background:var(--amarillo-suave)}
+.promo-img{min-height:420px}
+@media (max-width:860px){.promo{grid-template-columns:1fr}.promo-texto{padding:40px 28px}.promo-img{min-height:0;aspect-ratio:2/3;order:-1}}
+
+/* =========================================================
+   8. CÓMO PEDIR (es un proceso, por eso va numerado)
+   ========================================================= */
+.pasos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;list-style:none;padding:0;margin:0;counter-reset:paso}
+.pasos li{counter-increment:paso}
+.pasos li::before{content:counter(paso);display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--amarillo);font-family:var(--fuente-titulos);font-size:1.6rem;margin-bottom:14px;color:var(--sobre-amarillo)}
+.pasos h3{font-size:1.25rem}
+.pasos p{color:var(--texto-suave)}
+
+/* =========================================================
+   9. NOSOTROS
+   ========================================================= */
+.nosotros .contenedor{display:grid;grid-template-columns:.9fr 1fr;gap:64px;align-items:center}
+.nosotros-img{aspect-ratio:4/5;border-radius:var(--radio);overflow:hidden}
+.nosotros p{color:var(--texto-suave)}
+.nosotros .nota-mano{display:block;margin:4px 0 24px}
+@media (max-width:860px){.nosotros .contenedor{grid-template-columns:1fr}}
+
+/* =========================================================
+   10. OPINIONES Y GALERÍA
+   ========================================================= */
+.opiniones{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+.opinion{margin:0;background:var(--superficie);padding:28px;border-radius:var(--radio)}
+.opinion blockquote{margin:0 0 16px;font-size:1.05rem}
+.opinion figcaption{font-weight:800}
+.estrellas{color:var(--amarillo);margin-bottom:10px;letter-spacing:2px;font-size:1.1rem}
+.galeria{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:220px;gap:12px}
+.galeria figure{margin:0;background:var(--fondo-alt);border-radius:14px;overflow:hidden}
+.galeria figure:nth-child(1){grid-row:span 2}
+.galeria figure:nth-child(4){grid-row:span 2}
+@media (max-width:700px){.galeria{grid-template-columns:repeat(2,1fr);grid-auto-rows:180px}}
+
+/* =========================================================
+   11. CONTACTO Y PIE
+   ========================================================= */
+.contacto .contenedor{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.dato{margin-bottom:18px}
+.dato strong{display:block;font-family:var(--fuente-titulos);font-weight:400;font-size:1.2rem}
+.mapa{border-radius:var(--radio);overflow:hidden;min-height:320px;background:var(--fondo-alt);display:grid;place-items:center;color:var(--texto-suave);text-align:center;padding:20px}
+.mapa iframe{width:100%;height:100%;min-height:320px;border:0}
+@media (max-width:860px){.contacto .contenedor{grid-template-columns:1fr}}
+.pie{background:var(--oscuro);color:var(--sobre-oscuro);border-top:1px solid var(--borde);padding:48px 0 28px}
+.pie .contenedor{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:flex-start}
+.pie .logo{color:var(--sobre-oscuro)}
+.pie .logo-sub{color:var(--sobre-oscuro);opacity:.7;display:block}
+.pie a{color:var(--sobre-oscuro);text-decoration:none;opacity:.85}
+.pie a:hover{opacity:1}
+.redes{display:flex;gap:18px}
+.copy{width:100%;border-top:1px solid rgba(255,255,255,.2);padding-top:20px;font-size:.85rem;opacity:.7}
+
+/* =========================================================
+   12. CARRITO, MODAL Y AVISOS
+   ========================================================= */
+.capa{position:fixed;inset:0;background:rgba(30,22,52,.55);opacity:0;pointer-events:none;transition:opacity .3s;z-index:80}
+.capa.visible{opacity:1;pointer-events:auto}
+.carrito{position:fixed;top:0;right:0;height:100%;width:min(420px,100%);background:var(--fondo);z-index:90;transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.carrito.abierto{transform:none}
+.carrito-cab{display:flex;justify-content:space-between;align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 20px 20px;border-bottom:1px solid var(--borde)}
+.carrito-cab h2{font-size:1.6rem;margin:0}
+.carrito-lista{flex:1;overflow-y:auto;padding:20px;list-style:none;margin:0}
+.item{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;margin-bottom:18px}
+.item-img{width:70px;height:70px;border-radius:12px;overflow:hidden;background:var(--fondo-alt)}
+.item h3{font-family:var(--fuente-texto);font-weight:800;font-size:1rem;margin:0}
+.item small{color:var(--texto-suave)}
+.cantidad{display:flex;align-items:center;gap:6px;margin-top:4px}
+.cantidad button{width:28px;height:28px;border-radius:50%;border:1px solid var(--borde);background:var(--superficie);color:var(--texto)}
+.quitar{background:none;border:0;color:var(--texto-suave);text-decoration:underline;font-size:.85rem}
+.carrito-vacio{text-align:center;color:var(--texto-suave);padding:40px 10px}
+.carrito-pie{padding:20px;border-top:1px solid var(--borde)}
+.carrito-pie label{display:block;font-weight:700;font-size:.92rem;margin-bottom:6px}
+.carrito-pie textarea{width:100%;min-height:64px;border:1px solid var(--borde);border-radius:12px;padding:10px 12px;font:inherit;font-size:.95rem;color:var(--texto);background:var(--superficie);resize:vertical;margin-bottom:14px}
+.total{display:flex;justify-content:space-between;font-weight:800;font-size:1.25rem;margin-bottom:14px}
+.carrito-pie .btn{width:100%;justify-content:center}
+.total-bs{display:block;font-size:.95rem;color:var(--principal)}
+.tasa-carrito{font-size:.8rem;color:var(--texto-suave);margin:-6px 0 12px;text-align:right}
+.chip-tasa{display:inline-block;background:var(--amarillo-suave);color:var(--sobre-amarillo);font-weight:700;font-size:.9rem;padding:6px 14px;border-radius:999px;margin-bottom:20px}
+
+.modal{position:fixed;inset:0;display:grid;place-items:center;z-index:95;padding:20px;pointer-events:none;opacity:0;transition:opacity .25s}
+.modal.visible{opacity:1;pointer-events:auto}
+.modal-caja{background:var(--fondo);border-radius:var(--radio);max-width:880px;width:100%;max-height:90vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;position:relative}
+.modal-galeria{background:var(--fondo-alt)}
+.modal-img{aspect-ratio:4/5}
+.miniaturas{display:flex;gap:8px;padding:10px}
+.miniaturas:empty{display:none}
+.miniaturas button{width:60px;height:60px;border-radius:10px;overflow:hidden;border:2px solid transparent;padding:0;background:none}
+.miniaturas button[aria-pressed="true"]{border-color:var(--principal)}
+.modal-info{padding:36px 32px}
+.modal-info h2{font-size:2rem;padding-right:44px}
+.modal-info p{color:var(--texto-suave)}
+.modal-cerrar{position:absolute;top:12px;right:12px;z-index:2}
+.opciones{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 24px}
+.opcion{border:2px solid var(--borde);background:var(--superficie);color:var(--texto);border-radius:12px;padding:8px 14px;font-weight:600}
+.opcion[aria-pressed="true"]{border-color:var(--principal);color:var(--principal)}
+@media (max-width:700px){.modal-caja{grid-template-columns:1fr}.modal-img{aspect-ratio:1}}
+
+.toast{visibility:hidden;position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;transform:translate(-50%,180%);background:var(--oscuro);color:var(--sobre-oscuro);border:1px solid var(--borde);padding:12px 22px;border-radius:999px;z-index:100;transition:transform .3s;font-weight:600}
+.toast.visible{visibility:visible;transform:translate(-50%,0)}
+.whatsapp-flotante{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;background:#25D366;display:grid;place-items:center;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.whatsapp-flotante svg{width:32px;height:32px;fill:#fff}
+
+/* =========================================================
+   13. SELECTOR DE TEMA (Claro / Oscuro / Automático)
+   ========================================================= */
+.tema{position:relative}
+.tema-menu{position:absolute;top:calc(100% + 10px);right:0;background:var(--superficie);border:1px solid var(--borde);border-radius:16px;padding:6px;min-width:190px;box-shadow:0 12px 30px var(--sombra);list-style:none;margin:0;display:none;z-index:70}
+.tema-menu.abierto{display:block}
+.tema-menu button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:var(--texto);padding:10px 12px;border-radius:10px;font-weight:600;text-align:left}
+.tema-menu button:hover{background:var(--fondo-alt)}
+.tema-menu button[aria-checked="true"]{color:var(--principal)}
+.tema-menu button[aria-checked="true"]::after{content:"✓";margin-left:auto}
+.tema-menu svg{width:18px;height:18px;flex:none}
+/* En modo oscuro las fotos se oscurecen un poquito para no encandilar */
+:root[data-theme="dark"] .img-cubrir{filter:brightness(.92)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .img-cubrir{filter:brightness(.92)}}
+
+/* Destello cuando la tasa BCV cambia */
+@keyframes destello{0%{background:var(--amarillo);color:var(--sobre-amarillo)}100%{background:transparent}}
+.tasa-cambio{animation:destello 1.6s ease-out;border-radius:6px}
+.chip-tasa.tasa-cambio{animation:none;outline:3px solid var(--amarillo);outline-offset:2px;transition:outline-color 1.6s}
+
+/* Mientras cambia el tema se desactivan las transiciones para que
+   todo cambie de color al mismo tiempo, sin parpadeos */
+.cambiando-tema *,.cambiando-tema *::before,.cambiando-tema *::after{transition:none!important;animation:none!important}
+
+/* =========================================================
+   14. EXTRAS
+   ========================================================= */
+.producto-pie{flex-wrap:wrap}
+.botones-card{display:flex;gap:8px;width:100%}
+.botones-card button{flex:1}
+.btn-extras-card{background:transparent;color:var(--principal);border:2px solid var(--principal);border-radius:999px;padding:8px 14px;font-weight:700}
+.btn-extras-card:hover{background:var(--fondo-alt)}
+
+.btn-extras{display:flex;align-items:center;gap:12px;width:100%;background:var(--superficie);border:2px dashed var(--lavanda);border-radius:14px;padding:12px 14px;color:var(--texto);text-align:left;margin-bottom:12px}
+.btn-extras:hover{border-style:solid}
+.btn-extras > svg:first-child{width:24px;height:24px;color:var(--principal);flex:none}
+.btn-extras-texto{flex:1;display:flex;flex-direction:column;line-height:1.25}
+.btn-extras-texto small{color:var(--texto-suave);font-size:.85rem}
+.btn-extras .flecha{width:20px;height:20px;transition:transform .2s;flex:none}
+.btn-extras[aria-expanded="true"]{border-style:solid;border-color:var(--principal)}
+.btn-extras[aria-expanded="true"] .flecha{transform:rotate(180deg)}
+
+.panel-extras{margin-bottom:20px}
+.extras-ayuda{font-size:.9rem;margin-bottom:10px}
+.lista-extras{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.extra{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--superficie);border:1px solid var(--borde);border-radius:12px;padding:10px 12px}
+.extra.activo{border-color:var(--principal);box-shadow:inset 3px 0 0 var(--principal)}
+.extra-info{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+.extra-info strong{font-size:.95rem}
+.extra-info small{color:var(--texto-suave);font-size:.8rem}
+.extra-precio{font-size:.82rem;font-weight:700;color:var(--principal);margin-top:2px}
+.extra .cantidad{margin:0;flex:none}
+.cantidad button:disabled{opacity:.35;cursor:not-allowed}
+.desglose{font-size:.85rem;margin:8px 0 0;text-align:right;min-height:1em}
+.desglose:empty{display:none}
+.item-extras{display:block;color:var(--principal)!important;font-size:.8rem;line-height:1.3;margin-top:2px}
+/* Precio y "Agregar al carrito" siempre visibles al final de la ventana */
+.modal-info .producto-pie{position:sticky;bottom:0;background:var(--fondo);margin:16px -32px -36px;padding:16px 32px calc(20px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--borde);z-index:1}
+.modal-info .desglose{margin:0}
+.modal-info .producto-pie .desglose{width:100%;text-align:left;order:3;margin-top:-4px}
+@media (min-width:701px){.modal-galeria{position:sticky;top:0;align-self:start}}
+@media (max-width:400px){.modal-info .producto-pie{bottom:0;margin:16px -20px calc(-24px - env(safe-area-inset-bottom,0px));padding:14px 20px calc(16px + env(safe-area-inset-bottom,0px))}}
+
+/* =========================================================
+   15. AVISO DE PAGO (abono por adelantado)
+   ========================================================= */
+.aviso-pago{display:flex;gap:12px;align-items:flex-start;background:color-mix(in srgb,var(--amarillo) 18%,var(--superficie));border:1px solid color-mix(in srgb,var(--amarillo) 55%,transparent);border-radius:14px;padding:12px 14px;margin:0 0 20px}
+.aviso-pago svg{width:22px;height:22px;flex:none;color:var(--texto);margin-top:2px}
+.aviso-pago-titulo{display:block;font-weight:800;font-size:.95rem;color:var(--texto)}
+.modal-info .aviso-pago p{margin:2px 0 0;font-size:.9rem;line-height:1.5;color:var(--texto)}
+.monto-bs{color:var(--texto-suave);font-size:.85em}
+.pago-carrito{background:var(--fondo-alt);border-radius:12px;padding:10px 12px;margin:-4px 0 14px;font-size:.88rem}
+.pago-carrito div{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pago-carrito div + div{margin-top:4px}
+.pago-carrito span:last-child{text-align:right}
+
+/* Ajustes en celular para la ventana del producto */
+@media (max-width:700px){
+  .modal-img{aspect-ratio:auto;height:34vh;min-height:200px}
+  .miniaturas{padding:8px}
+  .miniaturas button{width:48px;height:48px}
+}
+@media (max-width:400px){
+  .modal-info .producto-pie{flex-wrap:wrap;gap:10px}
+  .modal-info .producto-pie .btn{flex:1 1 100%;justify-content:center;padding:12px 16px}
+  .modal-info{padding-top:20px}
+}
+/* Aviso flotante: no se deforma en pantallas angostas */
+.toast{width:max-content;max-width:calc(100% - 40px);text-align:center;border-radius:18px}
+/* Resumen del abono en el pie (solo en celular; en PC se ve el recuadro completo) */
+.abono-corto{display:none;width:100%;order:4;margin:0;font-size:.82rem;color:var(--texto);background:color-mix(in srgb,var(--amarillo) 22%,transparent);border-radius:8px;padding:6px 10px}
+@media (max-width:700px){.abono-corto{display:block}}
+
+/* =========================================================
+   16. MÉTODOS DE PAGO
+   ========================================================= */
+/* El carrito completo se desplaza; el botón de enviar queda fijo abajo */
+.carrito{overflow-y:auto;overscroll-behavior:contain}
+.carrito-lista{flex:1 0 auto;overflow:visible}
+.carrito-cab{position:sticky;top:0;background:var(--fondo);z-index:2}
+.carrito-enviar{position:sticky;bottom:0;background:var(--fondo);margin:0 -20px -20px;padding:12px 20px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--borde)}
+
+.metodos-carrito{border:1px solid var(--borde);border-radius:14px;padding:14px;margin-bottom:16px;background:var(--superficie)}
+.metodos-titulo{display:block;font-weight:800;font-size:.95rem;margin-bottom:8px}
+.metodo-unico{display:inline-block;background:var(--fondo-alt);color:var(--principal);border-radius:999px;padding:4px 12px;font-size:.9rem;margin-bottom:10px}
+.metodos-opciones{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.metodos-opciones button{border:2px solid var(--borde);background:var(--superficie);color:var(--texto);border-radius:999px;padding:6px 14px;font-weight:700;font-size:.88rem}
+.metodos-opciones button[aria-checked="true"]{border-color:var(--principal);background:var(--principal);color:var(--sobre-principal)}
+
+.datos-pago{margin:0;display:flex;flex-direction:column;gap:6px}
+.datos-pago > div{display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:8px;background:var(--fondo);border-radius:10px;padding:6px 6px 6px 10px}
+.datos-pago dt{font-size:.8rem;color:var(--texto-suave);font-weight:600}
+.datos-pago dd{margin:0;font-weight:800;font-size:.92rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.btn-copiar{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--borde);background:var(--superficie);color:var(--principal);border-radius:999px;padding:5px 10px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.btn-copiar svg{width:14px;height:14px}
+.btn-copiar:hover{border-color:var(--principal)}
+.btn-copiar.copiado{background:var(--principal);color:var(--sobre-principal);border-color:var(--principal)}
+
+.monto-pagar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;background:color-mix(in srgb,var(--amarillo) 20%,var(--superficie));border-radius:10px;padding:8px 8px 8px 12px}
+.monto-pagar > span{display:flex;flex-direction:column;font-size:.8rem;color:var(--texto-suave);font-weight:600}
+.monto-pagar strong{font-size:1.1rem;color:var(--texto)}
+.metodos-nota{font-size:.8rem;color:var(--texto-suave);margin:10px 0 0}
+
+/* En la sección de contacto */
+#metodosContacto{display:flex;flex-direction:column;gap:12px;margin-top:6px;max-width:420px}
+.metodo-contacto > strong{display:block;font-family:var(--fuente-texto);font-size:.95rem;margin-bottom:6px;color:var(--principal)}
+.contacto .datos-pago > div{background:var(--superficie)}
+/* Con el carrito abierto, el aviso flotante sube para no tapar el botón */
+.carrito.abierto ~ .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+/* Pantallas muy angostas: el botón de copiar muestra solo el ícono */
+@media (max-width:360px){
+  .datos-pago .btn-copiar{padding:6px 8px}
+  .datos-pago .btn-copiar span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+}
+@media (max-width:360px){
+  .datos-pago > div{grid-template-columns:1fr auto;row-gap:0}
+  .datos-pago dt{grid-column:1;grid-row:1}
+  .datos-pago dd{grid-column:1;grid-row:2}
+  .datos-pago .btn-copiar{grid-column:2;grid-row:1 / span 2}
+}
+
+/* Botón "Copiar todos los datos" */
+.btn-copiar-todo{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;border:2px solid var(--principal);background:transparent;color:var(--principal);border-radius:999px;padding:10px 16px;font-weight:800;font-size:.9rem}
+.btn-copiar-todo svg{width:16px;height:16px;flex:none}
+.btn-copiar-todo:hover{background:var(--fondo-alt)}
+.btn-copiar-todo.copiado{background:var(--principal);color:var(--sobre-principal)}
+/* En celular, los botones de copiar individuales muestran solo el ícono
+   (está el botón grande "Copiar todos los datos" debajo) */
+@media (max-width:480px){
+  .datos-pago .btn-copiar{padding:6px 8px}
+  .datos-pago .btn-copiar span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .datos-pago .btn-copiar.copiado svg{animation:none}
+}
+
+/* =========================================================
+   17. CREA TU RAMO
+   ========================================================= */
+/* Tarjeta de invitación en la grilla */
+.cta-creador{background:linear-gradient(160deg,var(--principal),color-mix(in srgb,var(--principal) 60%,var(--oscuro)));color:var(--sobre-principal)}
+.cta-creador-enlace{display:flex;flex-direction:column;height:100%;text-decoration:none;color:inherit}
+.cta-creador-arte{display:block;aspect-ratio:4/3;background:color-mix(in srgb,var(--blanco) 85%,var(--principal));padding:12px}
+.cta-creador-arte svg{width:100%;height:100%}
+.cta-creador-texto{display:flex;flex-direction:column;gap:6px;padding:18px 20px 22px;flex:1}
+.cta-creador .nota-mano{color:var(--amarillo-suave);font-size:1.4rem}
+.cta-creador strong{font-family:var(--fuente-titulos);font-weight:400;font-size:1.5rem;line-height:1.15}
+.cta-creador-texto > span:not(.nota-mano):not(.btn){font-size:.95rem;opacity:.9;flex:1}
+.cta-creador .btn{align-self:flex-start;background:var(--amarillo);color:var(--sobre-amarillo);padding:10px 20px;margin-top:6px}
+.cta-creador-enlace:hover .btn{background:var(--amarillo-suave)}
+
+/* Sección del creador */
+.creador{margin-top:72px;padding-top:56px;border-top:1px solid var(--borde);scroll-margin-top:80px}
+.creador-cab .intro{margin-bottom:28px}
+.creador-cuerpo{display:grid;grid-template-columns:1fr 360px;gap:32px;align-items:start}
+.creador-pasos{display:flex;flex-direction:column;gap:20px;min-width:0}
+.cr-paso{border:1px solid var(--borde);border-radius:var(--radio);background:var(--superficie);padding:20px;margin:0;min-width:0}
+.cr-paso legend{display:flex;align-items:center;gap:10px;font-family:var(--fuente-titulos);font-size:1.3rem;padding:0 6px;float:left;width:100%;margin-bottom:14px}
+.cr-paso legend small{font-family:var(--fuente-texto);font-size:.85rem;color:var(--texto-suave);margin-left:auto}
+.cr-paso legend + *{clear:both}
+.cr-num{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--amarillo);color:var(--sobre-amarillo);font-family:var(--fuente-texto);font-weight:800;font-size:.95rem;flex:none}
+.cr-sub{display:block;font-weight:800;font-size:.9rem;margin:12px 0 8px;clear:both}
+
+.cr-tipos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;clear:both}
+.cr-tipo{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;border:2px solid var(--borde);background:var(--fondo);color:var(--texto);border-radius:16px;padding:12px 10px}
+.cr-tipo[aria-checked="true"]{border-color:var(--principal);box-shadow:0 0 0 3px color-mix(in srgb,var(--principal) 20%,transparent)}
+.cr-tipo-arte{width:84px;height:84px}
+.cr-tipo-arte svg{width:100%;height:100%}
+.cr-tipo strong{font-size:1rem}
+.cr-tipo small{font-size:.8rem;color:var(--texto-suave);line-height:1.3}
+.cr-tipo .cr-desde{color:var(--principal);font-weight:700;margin-top:4px}
+
+.cr-chips{display:flex;flex-wrap:wrap;gap:8px}
+.cr-chip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--borde);background:var(--fondo);color:var(--texto);border-radius:999px;padding:7px 14px;font-weight:700;font-size:.9rem}
+.cr-chip small{color:var(--texto-suave);font-weight:600}
+.cr-chip i{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.2);flex:none}
+.cr-chip[aria-checked="true"]{border-color:var(--principal);background:color-mix(in srgb,var(--principal) 12%,var(--fondo));color:var(--principal)}
+.cr-anadir{margin-top:16px;padding:10px 20px 10px 10px}
+.cr-anadir:disabled{opacity:.45;cursor:not-allowed}
+.cr-muestra{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--fondo);flex:none}
+.cr-muestra svg{width:32px;height:32px}
+.cr-anadir .cr-muestra{background:var(--blanco)}
+
+.cr-lista{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cr-linea{display:flex;align-items:center;gap:12px;border:1px solid var(--borde);border-radius:12px;padding:8px 12px;background:var(--fondo)}
+.cr-linea-txt{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}
+.cr-linea-txt small{color:var(--texto-suave);font-size:.82rem}
+.cr-linea .cantidad{margin:0}
+.cr-vacio{color:var(--texto-suave);font-size:.92rem;padding:12px;border:1px dashed var(--borde);border-radius:12px;text-align:center}
+#crPresentacion .cr-sub:first-child{margin-top:0}
+.cr-paso textarea{width:100%;min-height:90px;border:1px solid var(--borde);border-radius:12px;padding:12px;font:inherit;font-size:.95rem;color:var(--texto);background:var(--fondo);resize:vertical;clear:both}
+
+/* Resumen */
+.creador-resumen{position:sticky;top:96px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio);padding:20px;display:flex;flex-direction:column;gap:10px;box-shadow:0 12px 30px var(--sombra)}
+.cr-preview{aspect-ratio:1;background:radial-gradient(circle at 50% 40%,var(--fondo-alt),var(--fondo));border-radius:16px;padding:8px}
+.cr-preview svg{width:100%;height:100%}
+.creador-resumen h3{font-size:1.35rem;margin:6px 0 0}
+.cr-desglose{font-size:.9rem;color:var(--texto-suave)}
+.cr-desglose div{display:flex;justify-content:space-between;padding:3px 0}
+.cr-total{display:flex;justify-content:space-between;align-items:flex-start;border-top:1px solid var(--borde);padding-top:10px;font-weight:800}
+.cr-total .precio{text-align:right;font-size:1.3rem}
+.cr-abono{font-size:.85rem;margin:0;background:color-mix(in srgb,var(--amarillo) 20%,transparent);border-radius:8px;padding:8px 10px}
+.cr-abono:empty,.cr-mensaje:empty{display:none}
+.cr-mensaje{margin:0;font-size:.88rem;font-weight:700;color:var(--principal)}
+.creador-resumen .btn{justify-content:center}
+#crAgregar:disabled{opacity:.45;cursor:not-allowed}
+.cr-reiniciar{background:none;border:0;color:var(--texto-suave);text-decoration:underline;font-size:.88rem;padding:4px}
+.cr-nota{font-size:.78rem;color:var(--texto-suave);margin:0;text-align:center}
+
+/* Carrito: miniatura de la creación */
+.item-svg{display:block;width:100%;height:100%;background:var(--fondo-alt);padding:4px}
+.item-svg svg{width:100%;height:100%}
+.item-idea{display:block;font-style:italic;font-size:.8rem;line-height:1.3}
+
+@media (max-width:960px){
+  .creador-cuerpo{grid-template-columns:1fr}
+  .creador-resumen{position:static;order:2}
+  .cr-preview{max-width:280px;width:100%;margin:0 auto}
+}
+@media (max-width:560px){
+  .cr-tipos{grid-template-columns:1fr}
+  .cr-tipo{display:grid;grid-template-columns:56px 1fr;column-gap:12px;row-gap:0;text-align:left;align-items:center;padding:10px 12px}
+  .cr-tipo-arte{width:56px;height:56px;grid-row:1 / span 3}
+  .cr-tipo .cr-desde{margin-top:2px}
+  .cr-paso{padding:16px}
+  .cr-paso legend{font-size:1.15rem;flex-wrap:wrap}
+  .cr-paso legend small{margin-left:42px;width:100%}
+}
+
+/* Cualquier elemento con el atributo hidden queda oculto */
+[hidden]{display:none!important}
+
+/* Barra fija del creador (solo celular y tablet) */
+.cr-barra{display:none}
+@media (max-width:960px){
+  .cr-barra{display:flex;align-items:center;gap:12px;position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:55;background:var(--superficie);border:1px solid var(--borde);border-radius:18px;padding:8px 8px 8px 10px;box-shadow:0 12px 30px var(--sombra);transform:translateY(160%);transition:transform .3s}
+  .cr-barra.visible{transform:none}
+  .cr-barra-mini{width:48px;height:48px;border-radius:12px;background:var(--fondo-alt);flex:none;padding:2px}
+  .cr-barra-mini svg{width:100%;height:100%}
+  .cr-barra-txt{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.25}
+  .cr-barra-txt small{color:var(--texto-suave);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cr-barra-txt strong{font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cr-barra .btn{padding:10px 14px;font-size:.88rem;white-space:nowrap}
+  .con-barra-creador .whatsapp-flotante{transform:translateY(-84px);transition:transform .3s}
+}
+.whatsapp-flotante{transition:transform .3s}
+
+/* Métodos de pago en "Hablemos": solo los nombres */
+.metodos-lista{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.metodos-lista li{background:var(--superficie);border:1px solid var(--borde);color:var(--principal);font-weight:800;border-radius:999px;padding:6px 16px;font-size:.95rem}
+
+.cr-sin-opciones{margin:0;color:var(--texto-suave);font-size:.92rem}
+
+/* =========================================================
+   18. CARRITO — diseño actual y minimalista
+   ========================================================= */
+.carrito{width:min(440px,100%);background:var(--fondo)}
+.carrito.abierto{box-shadow:-24px 0 60px rgba(30,22,52,.18)}
+.carrito-cab{padding:calc(18px + env(safe-area-inset-top,0px)) 20px 16px;border-bottom:1px solid var(--borde);background:color-mix(in srgb,var(--fondo) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.carrito-titulo{display:flex;flex-direction:column;line-height:1.15}
+.carrito-titulo h2{font-size:1.55rem;margin:0}
+.carrito-titulo small{color:var(--texto-suave);font-size:.82rem;font-weight:600;margin-top:2px}
+.carrito-titulo small:empty{display:none}
+.carrito-cab .icono-btn{width:40px;height:40px}
+.carrito-cab .icono-btn svg{width:18px;height:18px}
+
+/* Lista de productos */
+.carrito-lista{padding:8px 20px 4px}
+.item{display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:start;padding:16px 0;margin:0;border-bottom:1px solid var(--borde)}
+.item:last-child{border-bottom:0}
+.item-img{width:76px;height:92px;border-radius:14px;overflow:hidden;background:var(--fondo-alt)}
+.item-cuerpo{min-width:0;display:flex;flex-direction:column;gap:4px}
+.item-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.item h3{font-family:var(--fuente-texto);font-weight:700;font-size:.95rem;line-height:1.3;margin:0}
+.item-quitar{flex:none;display:grid;place-items:center;width:30px;height:30px;margin:-4px -6px 0 0;border:0;border-radius:8px;background:transparent;color:var(--texto-suave);transition:background .2s,color .2s}
+.item-quitar svg{width:17px;height:17px}
+.item-quitar:hover{background:color-mix(in srgb,#D7263D 10%,transparent);color:#C0283A}
+.item-detalle{margin:0;font-size:.82rem;color:var(--texto-suave);line-height:1.45}
+.item-extras{margin:2px 0 0;font-size:.8rem;line-height:1.4;color:var(--principal);font-weight:600}
+.item-extras span{color:var(--texto-suave);font-weight:500}
+.item-idea{margin:2px 0 0;font-size:.8rem;font-style:italic;color:var(--texto-suave);line-height:1.4}
+.item-pie{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.item .cantidad{margin:0;gap:0;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);padding:2px}
+.item .cantidad button{width:30px;height:30px;border:0;background:transparent;font-size:1rem;color:var(--texto)}
+.item .cantidad button:hover{background:var(--fondo-alt)}
+.item .cantidad span{min-width:24px;text-align:center;font-weight:700;font-size:.9rem}
+.item-precio{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25}
+.item-precio strong{font-size:1rem}
+.item-precio small{font-size:.75rem;color:var(--texto-suave)}
+
+/* Carrito vacío */
+.carrito-vacio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:72px 12px 40px;color:var(--texto-suave)}
+.vacio-icono{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:var(--fondo-alt);color:var(--principal);margin-bottom:10px}
+.vacio-icono svg{width:32px;height:32px}
+.carrito-vacio strong{font-size:1.05rem;color:var(--texto)}
+.carrito-vacio > span{font-size:.92rem}
+.vacio-acciones{display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px;margin-top:22px}
+.vacio-acciones .btn{justify-content:center;padding:12px 20px}
+
+/* Pie: tarjeta, resumen y pago */
+.carrito-pie{padding:4px 20px 20px;border-top:1px solid var(--borde);display:flex;flex-direction:column;gap:12px}
+.carrito-tarjeta{border:1px solid var(--borde);border-radius:14px;background:var(--superficie);margin-top:12px}
+.carrito-tarjeta summary{list-style:none;display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer}
+.carrito-tarjeta summary::-webkit-details-marker{display:none}
+.carrito-tarjeta summary > svg:first-child{width:20px;height:20px;color:var(--principal);flex:none}
+.carrito-tarjeta summary > span{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}
+.carrito-tarjeta summary strong{font-size:.9rem}
+.carrito-tarjeta summary small{font-size:.78rem;color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.carrito-tarjeta.con-texto summary small{color:var(--principal);font-style:italic}
+.carrito-tarjeta .flecha{width:18px;height:18px;color:var(--texto-suave);transition:transform .2s;flex:none}
+.carrito-tarjeta[open] .flecha{transform:rotate(180deg)}
+.carrito-pie .carrito-tarjeta textarea{margin:0;border:0;border-top:1px solid var(--borde);border-radius:0 0 14px 14px;min-height:80px;padding:12px 14px;background:transparent}
+.carrito-pie .carrito-tarjeta textarea:focus{outline:none;background:var(--fondo)}
+
+.carrito-resumen{background:var(--superficie);border:1px solid var(--borde);border-radius:14px;padding:14px}
+.carrito-resumen .total{margin:0;align-items:flex-start;font-size:1.05rem}
+.total-montos{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.total-montos #total{font-size:1.4rem}
+.carrito-resumen .total-bs{font-size:.88rem}
+.carrito-resumen .tasa-carrito{margin:6px 0 0;text-align:right;font-size:.74rem}
+.carrito-resumen .pago-carrito{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0;padding:0;background:transparent;font-size:.8rem}
+.carrito-resumen .pago-carrito > div{flex-direction:column;align-items:flex-start;gap:2px;margin:0;background:var(--fondo-alt);border-radius:10px;padding:8px 10px}
+.carrito-resumen .pago-carrito > div:first-child{background:color-mix(in srgb,var(--amarillo) 22%,var(--superficie))}
+.carrito-resumen .pago-carrito > div + div{margin-top:0}
+.carrito-resumen .pago-carrito span:first-child{color:var(--texto-suave);font-weight:600}
+.carrito-resumen .pago-carrito span:last-child{text-align:left;line-height:1.3}
+.carrito-resumen .pago-carrito .monto-bs{display:block;font-size:.95em}
+
+.metodos-carrito{margin:0;padding:14px;border-radius:14px}
+.metodos-titulo{font-size:.9rem}
+.metodos-opciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px;background:var(--fondo-alt);border-radius:12px;padding:4px}
+.metodos-opciones button{border:0;border-radius:9px;background:transparent;padding:9px 10px}
+.metodos-opciones button[aria-checked="true"]{background:var(--superficie);color:var(--texto);box-shadow:0 1px 3px rgba(30,22,52,.12)}
+
+.carrito-enviar{margin:0 -20px -20px}
+#enviarPedido{width:100%;justify-content:center;gap:10px;padding:15px 20px}
+#enviarPedido svg{width:20px;height:20px}
+.metodos-opciones button[aria-checked="true"]{color:var(--principal);box-shadow:inset 0 0 0 1.5px var(--principal),0 1px 3px rgba(30,22,52,.12)}
+
+/* =========================================================
+   19. CARRITO COMO VENTANA FLOTANTE
+   En PC aparece bajo el ícono de la bolsa; en el celular
+   flota sobre la parte de abajo de la pantalla.
+   ========================================================= */
+.carrito{
+  top:84px; right:20px; bottom:auto; left:auto;
+  height:auto; max-height:calc(100vh - 104px); max-height:calc(100dvh - 104px);
+  width:min(420px, calc(100% - 40px));
+  border:1px solid var(--borde); border-radius:24px;
+  box-shadow:0 24px 60px rgba(30,22,52,.22), 0 4px 14px rgba(30,22,52,.10);
+  transform:translateY(-10px) scale(.96); transform-origin:top right;
+  opacity:0; visibility:hidden;
+  transition:transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility .28s;
+  padding-bottom:0;
+}
+.carrito.abierto{transform:none; opacity:1; visibility:visible; box-shadow:0 24px 60px rgba(30,22,52,.22), 0 4px 14px rgba(30,22,52,.10)}
+/* Flechita que apunta a la bolsa del encabezado */
+.carrito::before{content:"";position:fixed;display:none}
+.carrito-cab{padding:16px 18px 14px;border-radius:24px 24px 0 0}
+.carrito-lista{padding:4px 18px}
+.carrito-pie{padding:4px 18px 18px}
+.carrito-enviar{margin:0 -18px -18px;padding:12px 18px 16px;border-radius:0 0 24px 24px}
+.carrito-vacio{padding:40px 12px 32px}
+.capa{background:rgba(30,22,52,.28)}
+
+/* Celular: ventana flotante sobre la parte inferior */
+@media (max-width:600px){
+  .carrito{
+    top:auto; right:10px; left:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    width:auto; max-height:calc(100vh - 80px); max-height:calc(100dvh - 80px);
+    border-radius:22px; transform:translateY(24px) scale(.98); transform-origin:bottom center;
+  }
+  .carrito-cab{border-radius:22px 22px 0 0}
+  .carrito-enviar{border-radius:0 0 22px 22px;padding-bottom:14px}
+  .carrito-cab::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:4px;border-radius:4px;background:var(--borde);transform:translateX(-50%)}
+  .carrito-cab{padding-top:20px}
+}
+@media (prefers-reduced-motion:reduce){.carrito{transition:opacity .15s,visibility .15s}}
+@media (min-width:601px){.carrito{max-height:calc(100vh - var(--carrito-top,84px) - 20px)}}
+@media (max-width:420px){#enviarPedido{font-size:.95rem;white-space:nowrap;padding:14px 16px}}
+
+/* =========================================================
+   20. VENTANA DEL PEDIDO — VERSIÓN COMPACTA
+   Más pequeña y densa, con todo el detalle visible.
+   ========================================================= */
+.carrito{width:min(360px, calc(100% - 32px));border-radius:20px}
+@media (min-width:601px){.carrito{max-height:min(620px, calc(100vh - var(--carrito-top,84px) - 16px));max-height:min(620px, calc(100dvh - var(--carrito-top,84px) - 16px))}}
+
+/* Encabezado */
+.carrito .carrito-cab{padding:11px 14px 10px;border-radius:20px 20px 0 0}
+.carrito .carrito-titulo h2{font-size:1.2rem}
+.carrito .carrito-titulo small{font-size:.74rem;margin-top:0}
+.carrito .carrito-cab .icono-btn{width:32px;height:32px}
+.carrito .carrito-cab .icono-btn svg{width:15px;height:15px}
+
+/* Productos */
+.carrito .carrito-lista{padding:2px 14px}
+.carrito .item{grid-template-columns:54px 1fr;gap:10px;padding:10px 0}
+.carrito .item-img{width:54px;height:64px;border-radius:10px}
+.carrito .item-cuerpo{gap:2px}
+.carrito .item h3{font-size:.84rem;line-height:1.25}
+.carrito .item-quitar{width:26px;height:26px;margin:-3px -5px 0 0}
+.carrito .item-quitar svg{width:15px;height:15px}
+.carrito .item-detalle,.carrito .item-extras,.carrito .item-idea{font-size:.74rem;line-height:1.35}
+.carrito .item-pie{margin-top:5px}
+.carrito .item .cantidad{padding:1px}
+.carrito .item .cantidad button{width:24px;height:24px;font-size:.9rem}
+.carrito .item .cantidad span{min-width:20px;font-size:.8rem}
+.carrito .item-precio strong{font-size:.88rem}
+.carrito .item-precio small{font-size:.68rem}
+
+/* Pie: tarjeta, resumen y pago */
+.carrito .carrito-pie{padding:2px 14px 14px;gap:8px}
+.carrito .carrito-tarjeta{margin-top:8px;border-radius:12px}
+.carrito .carrito-tarjeta summary{padding:8px 11px;gap:10px}
+.carrito .carrito-tarjeta summary > svg:first-child{width:17px;height:17px}
+.carrito .carrito-tarjeta summary strong{font-size:.8rem}
+.carrito .carrito-tarjeta summary small{font-size:.7rem}
+.carrito .carrito-pie .carrito-tarjeta textarea{min-height:64px;padding:9px 11px;font-size:.85rem}
+
+.carrito .carrito-resumen{padding:10px 12px;border-radius:12px}
+.carrito .carrito-resumen .total{font-size:.92rem}
+.carrito .total-montos #total{font-size:1.15rem}
+.carrito .carrito-resumen .total-bs{font-size:.76rem}
+.carrito .carrito-resumen .tasa-carrito{font-size:.66rem;margin-top:3px}
+.carrito .carrito-resumen .pago-carrito{gap:6px;margin-top:8px;font-size:.7rem}
+.carrito .carrito-resumen .pago-carrito > div{padding:6px 8px;border-radius:8px}
+
+.carrito .metodos-carrito{padding:10px 12px;border-radius:12px}
+.carrito .metodos-titulo{font-size:.8rem;margin-bottom:6px}
+.carrito .metodos-opciones{padding:3px;border-radius:10px;margin-bottom:8px}
+.carrito .metodos-opciones button{padding:6px 8px;font-size:.8rem;border-radius:8px}
+.carrito .datos-pago{gap:4px}
+.carrito .datos-pago > div{grid-template-columns:54px 1fr auto;gap:6px;padding:3px 3px 3px 8px;border-radius:8px}
+.carrito .datos-pago dt{font-size:.7rem}
+.carrito .datos-pago dd{font-size:.82rem}
+/* Copiar individual: solo ícono (el botón "Copiar todo" está debajo) */
+.carrito .datos-pago .btn-copiar{padding:5px 7px}
+.carrito .datos-pago .btn-copiar span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.carrito .monto-pagar{margin-top:6px;padding:6px 6px 6px 10px;border-radius:8px}
+.carrito .monto-pagar > span{font-size:.7rem}
+.carrito .monto-pagar strong{font-size:.95rem}
+.carrito .btn-copiar{font-size:.72rem;padding:4px 9px}
+.carrito .btn-copiar-todo{margin-top:8px;padding:8px 12px;font-size:.8rem;border-width:1.5px}
+.carrito .metodos-nota{font-size:.68rem;margin-top:6px;line-height:1.4}
+
+.carrito .carrito-enviar{margin:0 -14px -14px;padding:10px 14px 12px;border-radius:0 0 20px 20px}
+.carrito #enviarPedido{padding:11px 16px;font-size:.88rem;gap:8px}
+.carrito #enviarPedido svg{width:17px;height:17px}
+
+/* Carrito vacío más pequeño */
+.carrito .carrito-vacio{padding:26px 10px 22px;gap:4px}
+.carrito .vacio-icono{width:56px;height:56px;margin-bottom:6px}
+.carrito .vacio-icono svg{width:26px;height:26px}
+.carrito .carrito-vacio strong{font-size:.95rem}
+.carrito .carrito-vacio > span{font-size:.82rem}
+.carrito .vacio-acciones{gap:8px;margin-top:14px;max-width:220px}
+.carrito .vacio-acciones .btn{padding:9px 16px;font-size:.88rem}
+
+/* Celular: también más compacta */
+@media (max-width:600px){
+  .carrito{left:auto;right:10px;width:min(360px, calc(100% - 20px));max-height:78vh;max-height:78dvh;border-radius:20px;transform-origin:bottom right}
+  .carrito .carrito-cab{padding-top:16px}
+  .carrito .carrito-enviar{border-radius:0 0 20px 20px}
+}
+@media (max-width:360px){
+  .carrito .datos-pago > div{grid-template-columns:1fr auto}
+  .carrito .datos-pago dt{grid-column:1;grid-row:1}
+  .carrito .datos-pago dd{grid-column:1;grid-row:2}
+  .carrito .datos-pago .btn-copiar{grid-column:2;grid-row:1 / span 2}
+}
+.carrito #enviarPedido svg{flex:none}
+@media (max-width:340px){.carrito #enviarPedido{font-size:.84rem;padding:11px 12px}}
+
+/* =========================================================
+   21. LOGO "Bloom & Co"
+   ========================================================= */
+.logo-texto{letter-spacing:.06em;font-size:1.7rem;white-space:nowrap}
+.logo-amp{color:var(--principal);font-size:.9em;margin:0 .02em}
+.pie .logo-amp{color:var(--lavanda)}
+.logo-sub{letter-spacing:.14em;text-transform:uppercase;font-size:.6rem;margin-top:3px}
+@media (max-width:400px){.logo-texto{font-size:1.35rem;letter-spacing:.04em}}
+@media (max-width:340px){.logo svg{width:28px;height:21px}.logo{gap:7px}.logo-texto{font-size:1.22rem}}
+
+/* =========================================================
+   22. FOTOS REALES: tarjeta del creador y extras
+   ========================================================= */
+.cta-mosaico{display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:1fr 1fr;gap:4px;padding:0}
+.cta-mosaico img{width:100%;height:100%;object-fit:cover;display:block}
+.cta-mosaico img:first-child{grid-row:1 / span 2}
+.cta-creador-arte.cta-mosaico{aspect-ratio:4/3.4;background:var(--principal)}
+
+.extra{gap:12px}
+.extra-foto{flex:none;width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--fondo-alt);display:grid;place-items:center}
+.extra-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.extra-icono{color:var(--principal);background:color-mix(in srgb,var(--principal) 10%,var(--superficie))}
+.extra-icono svg{width:26px;height:26px}
+.extra .extra-info{flex:1}
+@media (max-width:400px){.extra-foto{width:44px;height:44px}.extra{gap:10px}}
+
+/* =========================================================
+   23. CREADOR CON FOTOS REALES
+   ========================================================= */
+/* Paso 1: tarjetas con foto */
+.cr-tipo{padding:8px 8px 12px;overflow:hidden}
+.cr-tipo-foto{width:100%;height:auto;aspect-ratio:5/4;border-radius:12px;overflow:hidden;margin-bottom:8px;background:var(--fondo-alt)}
+.cr-tipo-foto img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+.cr-tipo:hover .cr-tipo-foto img{transform:scale(1.04)}
+.cr-tipo[aria-checked="true"] .cr-tipo-foto{box-shadow:0 0 0 2px var(--principal)}
+@media (max-width:560px){
+  .cr-tipo{padding:8px 12px 8px 8px}
+  .cr-tipo-foto{width:64px;height:64px;aspect-ratio:1;margin:0;grid-row:1 / span 3}
+}
+
+/* Paso 2: flores con foto */
+.cr-chip-flor{padding:4px 14px 4px 4px}
+.cr-chip-flor img,.cr-chip-flor svg{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;background:var(--fondo-alt)}
+.cr-muestra-foto{position:relative;overflow:visible;background:transparent}
+.cr-muestra-foto img{width:36px;height:36px;border-radius:50%;object-fit:cover;display:block}
+.cr-muestra-foto i{position:absolute;right:-2px;bottom:-2px;width:14px;height:14px;border-radius:50%;border:2px solid var(--superficie);box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.cr-anadir .cr-muestra-foto i{border-color:var(--principal)}
+.cr-linea .cr-muestra-foto img{width:40px;height:40px}
+.cr-linea .cr-muestra-foto{width:40px;height:40px}
+@media (max-width:560px){.cr-tipo{grid-template-columns:64px 1fr;column-gap:14px}}
+
+/* =========================================================
+   24. REFERENCIA REAL EN EL RESUMEN DEL CREADOR
+   ========================================================= */
+.cr-preview{padding:0;overflow:hidden;position:relative}
+.cr-real{position:relative;width:100%;height:100%}
+.cr-real-foto{width:100%;height:100%;object-fit:cover;display:block}
+.cr-real::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(20,14,34,.72) 0%,rgba(20,14,34,.15) 42%,transparent 60%),linear-gradient(to bottom,rgba(20,14,34,.35),transparent 22%);pointer-events:none}
+.cr-real-etiqueta,.cr-real-pres{position:absolute;top:10px;z-index:1;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.92);color:#2E2648;font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.cr-real-etiqueta{left:10px;text-transform:uppercase;letter-spacing:.08em;font-size:.64rem}
+.cr-real-pres{right:10px}
+.cr-real-pres i{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.2)}
+.cr-real-flores{position:absolute;left:10px;right:10px;bottom:10px;z-index:1;display:flex;flex-wrap:wrap;gap:8px}
+.cr-real-flor{position:relative;width:44px;height:44px;border-radius:50%;border:2px solid #fff;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.cr-real-flor img,.cr-real-flor svg{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.cr-real-flor i{position:absolute;left:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;border:2px solid #fff}
+.cr-real-flor b{position:absolute;right:-6px;top:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#F6C21C;color:#2E2648;font-size:.72rem;font-weight:800;display:grid;place-items:center;border:2px solid #fff}
+.cr-real-mas{display:grid;place-items:center;font-weight:800;font-size:.8rem;color:#2E2648}
+.cr-real-vacio{color:#fff;font-weight:700;font-size:.85rem;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+
+/* Miniaturas: carrito y barra del celular */
+.mini-real{position:relative;display:block;width:100%;height:100%}
+.mini-real > img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+.mini-flor{position:absolute;right:2px;bottom:2px}
+.mini-flor .cr-muestra-foto img,.mini-flor .cr-muestra svg{width:22px;height:22px}
+.mini-flor .cr-muestra{width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.mini-flor .cr-muestra-foto i{width:9px;height:9px;border-width:1.5px;right:-2px;bottom:-2px}
+.item-real{padding:0!important}
+.cr-barra-mini{padding:0!important;overflow:hidden}
+
+/* =========================================================
+   25. DISEÑO ESTILO "ÁLBUM HECHO A MANO"
+   Inspirado en la plantilla elegida: fondos crema, letra de
+   pincel, textos tipo máquina de escribir, esquinas rectas,
+   dibujos a mano, bloque tipo cuaderno y pie con foto.
+   Para volver al diseño anterior, borra desde aquí hasta el
+   final del archivo (y usa el index.html anterior).
+   ========================================================= */
+:root{
+  --fondo:#F5F3EE; --fondo-alt:#ECEAE5; --superficie:#FFFFFF;
+  --texto:#1E1C19; --texto-suave:#5F5B54; --borde:#DCD8CF;
+  --principal:#B4472F; --principal-hover:#963A25; --lavanda:#F4927C;
+  --amarillo:#F2B705; --amarillo-suave:#FCE7A8;
+  --sobre-principal:#FFFFFF; --sobre-amarillo:#1E1C19;
+  --oscuro:#1E1C19; --sobre-oscuro:#F5F3EE;
+  --accion:#1E1C19; --accion-hover:#3A3631; --sobre-accion:#FFFFFF;
+  --coral:#F4927C; --verde:#2E7D4F; --naranja:#E8553A;
+  --fuente-titulos:"Caveat Brush","Caveat","Comic Sans MS",cursive;
+  --fuente-marca:"Permanent Marker","Caveat Brush",cursive;
+  --fuente-texto:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+  --fuente-mono:"IBM Plex Mono",ui-monospace,"Courier New",monospace;
+  --fuente-mano:"Caveat Brush","Caveat",cursive;
+  --radio:4px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fondo:#151412; --fondo-alt:#1C1A17; --superficie:#24211D; --texto:#F2EFE9; --texto-suave:#ABA59A; --borde:#38342E;
+    --principal:#F08A6E; --principal-hover:#F6A28B; --lavanda:#C9705C; --sobre-principal:#151412;
+    --oscuro:#0D0C0A; --sobre-oscuro:#F2EFE9; --accion:#F2EFE9; --accion-hover:#FFFFFF; --sobre-accion:#151412;
+    --coral:#C9705C; --verde:#5DBB87;
+  }
+}
+:root[data-theme="dark"]{
+  --fondo:#151412; --fondo-alt:#1C1A17; --superficie:#24211D; --texto:#F2EFE9; --texto-suave:#ABA59A; --borde:#38342E;
+  --principal:#F08A6E; --principal-hover:#F6A28B; --lavanda:#C9705C; --sobre-principal:#151412;
+  --oscuro:#0D0C0A; --sobre-oscuro:#F2EFE9; --accion:#F2EFE9; --accion-hover:#FFFFFF; --sobre-accion:#151412;
+  --coral:#C9705C; --verde:#5DBB87;
+}
+
+/* Tipografía general */
+body{font-family:var(--fuente-texto)}
+h1,h2,h3{font-family:var(--fuente-titulos);font-weight:400;letter-spacing:.01em}
+h2{font-size:clamp(2.3rem,4.6vw,3.4rem);line-height:1.05}
+p,.intro,.producto-info p,.pasos p,.nosotros p,.dato,.extras-ayuda,.metodos-nota,.cr-nota,.item-detalle,.aviso-pago p{font-family:var(--fuente-mono);letter-spacing:-.01em}
+.intro{font-size:.98rem;line-height:1.75}
+.nota-mano{font-family:var(--fuente-mano)}
+
+/* Dibujos a mano */
+.doodle{display:block;width:76px;height:76px;color:var(--texto);margin:0 auto 6px}
+.d-flecha{color:var(--verde);width:58px;height:70px;margin:8px auto 0}
+.d-garabato{color:var(--naranja)}
+.cab-seccion{text-align:center;max-width:720px;margin:0 auto 36px}
+.cab-seccion h2{margin-bottom:.3em}
+.cab-seccion .intro{margin:0 auto}
+
+/* Botones: rectos, como etiquetas de papel */
+.btn{border-radius:2px;font-family:var(--fuente-texto);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.84rem;padding:14px 26px}
+.btn-principal{background:var(--accion);color:var(--sobre-accion)}
+.btn-principal:hover{background:var(--accion-hover)}
+.btn-borde{box-shadow:inset 0 0 0 1.5px var(--texto);color:var(--texto)}
+.btn-papel{background:#FBFAF7;color:#1E1C19;font-family:var(--fuente-mano);text-transform:uppercase;letter-spacing:.08em;font-size:1.05rem;font-weight:400;padding:11px 26px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.btn-papel:hover{text-decoration:underline;text-underline-offset:4px}
+.btn-papel-linea{background:transparent;color:#FBFAF7;box-shadow:inset 0 0 0 1.5px #FBFAF7}
+
+/* Barra superior y encabezado */
+.aviso{background:var(--oscuro);color:var(--sobre-oscuro);font-family:var(--fuente-mono);font-size:.8rem;letter-spacing:.02em}
+.encabezado{background:var(--fondo);border-bottom:1px solid var(--borde)}
+.encabezado .contenedor{height:78px}
+.sello{width:58px;height:58px;flex:none}
+.sello-fondo{fill:var(--texto)}
+.sello-texto{fill:var(--fondo);font-family:var(--fuente-marca);font-size:12.5px}
+.sello-centro{color:var(--fondo)}
+.logo{gap:12px}
+.logo svg.sello{width:58px;height:58px}
+.logo-texto{font-family:var(--fuente-marca);font-size:1.45rem;letter-spacing:.02em}
+.logo-amp{color:var(--principal)}
+.logo-sub{font-family:var(--fuente-mono);text-transform:none;letter-spacing:.02em;font-size:.68rem}
+.menu a{font-family:var(--fuente-mano);font-weight:400;font-size:1.2rem;text-transform:uppercase;letter-spacing:.06em}
+.menu a:hover,.menu a.activo{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:2px;color:var(--texto)}
+.icono-btn{border-radius:50%;border-color:var(--borde)}
+.contador{background:var(--principal);color:var(--sobre-principal)}
+@media (max-width:860px){.menu a{font-size:1.3rem}}
+@media (max-width:400px){.sello,.logo svg.sello{width:46px;height:46px}.logo-texto{font-size:1.15rem}.logo{gap:8px}}
+
+/* Portada a pantalla completa */
+.portada-plena{position:relative;padding:0;min-height:min(86vh,760px);display:grid;place-items:center;overflow:hidden;background:#2A2622}
+.portada-fondo{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1.15fr 1fr}
+.portada-fondo img{width:100%;height:100%;object-fit:cover}
+.portada-plena::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(25,20,16,.55),rgba(25,20,16,.62))}
+.portada-contenido{position:relative;z-index:1;text-align:center;color:#FBFAF7;padding:80px 20px;max-width:880px}
+.portada-marca{font-family:var(--fuente-marca);font-size:clamp(3.6rem,11vw,8.5rem);line-height:.92;margin:0 0 .12em;letter-spacing:.01em;transform:rotate(-3deg);text-shadow:0 4px 24px rgba(0,0,0,.35)}
+.portada-marca span{color:var(--coral)}
+.portada-lema{font-family:var(--fuente-mano);font-size:clamp(1.7rem,3.4vw,2.5rem);margin:0 0 .5em}
+.portada-texto{font-family:var(--fuente-mono);font-size:clamp(.92rem,1.6vw,1.05rem);line-height:1.7;opacity:.95;margin:0 auto 1.6em}
+.portada-plena .portada-botones{justify-content:center;margin-top:0}
+@media (max-width:700px){
+  .portada-fondo{grid-template-columns:1fr 1fr}
+  .portada-fondo img:last-child{display:none}
+  .portada-plena{min-height:78vh}
+}
+@media (max-width:400px){.portada-plena .portada-botones .btn{flex:1 1 100%}}
+
+/* Ventajas */
+.ventajas{border:0;padding:56px 0 8px;text-align:center}
+.ventaja{flex-direction:column;align-items:center}
+.ventaja-icono{width:auto;height:auto;background:none;box-shadow:none;color:var(--texto)}
+.ventaja-icono .doodle{width:64px;height:64px;margin:0}
+.ventaja h3{font-family:var(--fuente-titulos);font-size:1.7rem;font-weight:400}
+.ventaja p{font-family:var(--fuente-mono);font-size:.88rem}
+
+/* Catálogo */
+.chip-tasa{border-radius:2px;background:var(--amarillo-suave);font-family:var(--fuente-mono);font-weight:500}
+.filtros{justify-content:center}
+.filtro{border-radius:2px;border:1.5px solid var(--texto);color:var(--texto);font-family:var(--fuente-mano);font-weight:400;font-size:1.15rem;text-transform:uppercase;letter-spacing:.05em;padding:6px 16px}
+.filtro[aria-pressed="true"]{background:var(--texto);color:var(--fondo)}
+.buscador{border-radius:2px;margin-left:auto;margin-right:auto;display:block;font-family:var(--fuente-mono);font-size:.9rem;border-color:var(--borde);background:var(--superficie)}
+#productos .chip-tasa{display:table;margin:0 auto 18px}
+.grilla{gap:28px}
+.producto{border-radius:0;border:0;box-shadow:0 1px 0 var(--borde)}
+.producto-img{border-radius:0}
+.etiqueta{border-radius:2px;background:var(--superficie);color:var(--texto);font-family:var(--fuente-mono);font-size:.72rem;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.producto-info h3{font-family:var(--fuente-texto);font-weight:600;font-size:1.15rem;line-height:1.25;letter-spacing:-.01em}
+.producto-info p{font-size:.82rem;line-height:1.6}
+.producto-pie{border-top:1px solid var(--borde);padding-top:12px;margin-top:10px}
+.precio{font-family:var(--fuente-texto)}
+.precio small{font-family:var(--fuente-mono);text-transform:lowercase}
+.precio-bs{color:var(--texto-suave);font-family:var(--fuente-mono);font-weight:500}
+.btn-agregar{border-radius:2px;background:var(--accion);color:var(--sobre-accion);font-family:var(--fuente-texto);text-transform:uppercase;letter-spacing:.05em;font-size:.78rem}
+.btn-agregar:hover{background:var(--accion-hover)}
+.btn-extras-card{border-radius:2px;border:1.5px solid var(--texto);color:var(--texto);font-family:var(--fuente-texto);text-transform:uppercase;letter-spacing:.05em;font-size:.78rem}
+.btn-extras-card:hover{background:var(--fondo-alt)}
+.cta-creador{border-radius:0;background:var(--coral);color:#1E1C19}
+.cta-creador .nota-mano{color:#1E1C19;font-size:1.5rem}
+.cta-creador strong{font-family:var(--fuente-titulos);font-size:2rem;color:#1E1C19}
+.cta-creador-texto > span:not(.nota-mano):not(.btn){font-family:var(--fuente-mono);font-size:.84rem;color:#1E1C19;opacity:1}
+.cta-creador .btn{background:#1E1C19;color:#FBFAF7}
+.cta-creador-arte.cta-mosaico{background:#1E1C19}
+
+/* Crea tu ramo */
+.creador{border-top:1px dashed var(--borde)}
+.creador-cab{text-align:center}
+.creador-cab .doodle{margin-bottom:0}
+.creador-cab .nota-mano{font-size:1.5rem;color:var(--principal)}
+.creador-cab .intro{margin:0 auto 32px}
+.cr-paso,.creador-resumen,.cr-tipo,.cr-linea,.cr-vacio,.extra{border-radius:var(--radio)}
+.cr-paso legend{font-family:var(--fuente-titulos);font-size:1.7rem}
+.cr-num{background:var(--texto);color:var(--fondo);font-family:var(--fuente-texto)}
+.cr-chip{border-radius:2px;font-family:var(--fuente-texto)}
+.cr-chip[aria-checked="true"],.cr-tipo[aria-checked="true"]{border-color:var(--texto);color:var(--texto);background:var(--superficie);box-shadow:0 0 0 1px var(--texto)}
+.cr-tipo-foto{border-radius:2px}
+.cr-tipo[aria-checked="true"] .cr-tipo-foto{box-shadow:none}
+.cr-anadir{border-radius:2px}
+.creador-resumen h3{font-family:var(--fuente-titulos);font-size:1.8rem}
+.cr-preview,.cr-real{border-radius:2px}
+
+/* Promoción: bloque tipo cuaderno con anillos */
+.promo-cuaderno{position:relative;background:var(--coral);color:#1E1C19;border-radius:0;overflow:visible;margin-top:34px;box-shadow:0 18px 40px rgba(0,0,0,.12)}
+.promo-cuaderno .anillos{position:absolute;left:5%;right:5%;top:-26px;height:52px;z-index:2;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='52' viewBox='0 0 110 52'%3E%3Cellipse cx='55' cy='40' rx='6' ry='5' fill='%23000' fill-opacity='.35'/%3E%3Cpath d='M48 40c-6-14-4-30 7-34 9-3 14 6 12 18' fill='none' stroke='%23777' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M48 40c-6-14-4-30 7-34 9-3 14 6 12 18' fill='none' stroke='%23E8E6E2' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x left top/110px 52px}
+.promo-cuaderno .promo-texto{color:#1E1C19;padding-top:64px}
+.promo-cuaderno .promo-texto h2{color:#1E1C19;font-size:clamp(2.4rem,4.4vw,3.4rem)}
+.promo-cuaderno .promo-texto p{color:#1E1C19;opacity:.9}
+.promo-cuaderno .nota-mano{color:#1E1C19;font-size:1.5rem}
+.promo-cuaderno .promo-texto li{border-color:rgba(30,28,25,.45);border-radius:2px;font-family:var(--fuente-mono);font-size:.82rem}
+.promo-cuaderno .promo-texto .btn{background:#FBFAF7;color:#1E1C19;border-radius:2px}
+.promo-cuaderno .promo-img{margin:40px 40px 40px 0;border-radius:0;box-shadow:0 10px 26px rgba(0,0,0,.2)}
+@media (max-width:860px){.promo-cuaderno .promo-img{margin:44px 20px 0}.promo-cuaderno .promo-texto{padding-top:28px}}
+
+/* Cómo pedir */
+.pasos li::before{border-radius:50%;background:var(--texto);color:var(--fondo);font-family:var(--fuente-texto);font-size:1.1rem;width:44px;height:44px}
+.pasos h3{font-size:1.65rem}
+.pasos p{font-size:.86rem;line-height:1.65}
+
+/* Nosotros: texto a la izquierda, foto a la derecha */
+.nosotros .contenedor{grid-template-columns:1fr 1fr}
+.nosotros .contenedor > div:last-child{order:-1;text-align:center}
+.nosotros h2{font-size:clamp(2.5rem,5vw,3.6rem)}
+.nosotros .nota-mano{display:block;color:var(--principal);font-size:1.5rem;margin:0 0 18px}
+.nosotros p{font-size:.92rem;line-height:1.75;max-width:46ch;margin-left:auto;margin-right:auto}
+.nosotros .btn{background:none;color:var(--texto);box-shadow:none;text-transform:none;letter-spacing:0;font-size:1rem;text-decoration:underline;text-underline-offset:5px;padding:8px 4px}
+.nosotros-img{position:relative;border-radius:0;overflow:visible}
+.nosotros-img img{border-radius:0}
+.nosotros-img .d-garabato{position:absolute;right:-18px;bottom:-34px;width:96px;height:96px;z-index:1}
+@media (max-width:860px){.nosotros .contenedor{grid-template-columns:1fr}.nosotros .contenedor > div:last-child{order:0}.nosotros-img .d-garabato{right:6px}}
+
+/* Galería */
+.galeria figure{border-radius:0}
+
+/* Contacto */
+.contacto .contenedor > div:first-child{text-align:left}
+.contacto .doodle{margin:0 0 4px}
+.contacto .dato strong{font-family:var(--fuente-titulos);font-size:1.4rem;font-weight:400}
+.contacto .dato a{color:var(--texto);text-decoration:underline;text-underline-offset:3px}
+.mapa{border-radius:0;border:1.5px dashed var(--borde);background:var(--superficie);font-family:var(--fuente-mono);font-size:.88rem}
+.metodos-lista li{border-radius:2px;font-family:var(--fuente-mono)}
+
+/* Pie con foto */
+.pie-foto{position:relative;overflow:hidden;background:#1E1C19;color:#FBFAF7;padding:72px 0 28px}
+.pie-fondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pie-foto::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(20,17,14,.72),rgba(20,17,14,.82));z-index:0}
+.pie-contenido{position:relative;z-index:1;display:grid !important;grid-template-columns:1.4fr 1fr;gap:32px 48px;align-items:end}
+.pie-marca{display:flex;align-items:flex-start;gap:18px}
+.pie-marca .sello{width:84px;height:84px}
+.sello-pie .sello-fondo{fill:#FBFAF7}
+.sello-pie .sello-texto{fill:#1E1C19}
+.sello-pie .sello-centro{color:#1E1C19}
+.pie-lema{font-family:var(--fuente-mano);font-size:clamp(1.6rem,3vw,2.3rem);line-height:1.2;margin:0;max-width:24ch}
+.pie-datos{display:flex;flex-direction:column;gap:6px;font-family:var(--fuente-mono);font-size:.9rem;text-align:right}
+.pie-datos a{color:#FBFAF7;text-decoration:none;opacity:.9}
+.pie-datos a:hover{opacity:1;text-decoration:underline}
+.pie-datos .redes{justify-content:flex-end;gap:16px;margin-top:8px}
+.pie-foto .copy{grid-column:1 / -1;border-top:1px solid rgba(255,255,255,.18);padding-top:18px;margin:8px 0 0;font-family:var(--fuente-mono);font-size:.78rem;opacity:.7}
+.pie-doodle{position:absolute;right:24px;bottom:18px;width:84px;height:84px;color:#FBFAF7;opacity:.85;z-index:1;margin:0}
+@media (max-width:700px){
+  .pie-contenido{grid-template-columns:1fr}
+  .pie-datos{text-align:left}.pie-datos .redes{justify-content:flex-start}
+  .pie-marca .sello{width:64px;height:64px}
+  .pie-doodle{width:60px;height:60px;bottom:56px}
+}
+
+/* Ventanas: producto y pedido con esquinas rectas */
+.modal-caja{border-radius:4px}
+.modal-info h2{font-family:var(--fuente-titulos);font-size:2.3rem}
+.opcion,.btn-extras,.aviso-pago,.extra{border-radius:2px}
+.opcion[aria-pressed="true"]{border-color:var(--texto);color:var(--texto);box-shadow:0 0 0 1px var(--texto)}
+.btn-extras[aria-expanded="true"]{border-color:var(--texto)}
+.btn-extras > svg:first-child{color:var(--principal)}
+.carrito{border-radius:6px}
+.carrito .carrito-cab{border-radius:6px 6px 0 0}
+.carrito .carrito-enviar{border-radius:0 0 6px 6px}
+.carrito .carrito-titulo h2{font-family:var(--fuente-titulos);font-size:1.6rem}
+.carrito-tarjeta,.carrito-resumen,.metodos-carrito,.datos-pago > div,.monto-pagar,.carrito-resumen .pago-carrito > div,.item-img,.vacio-icono{border-radius:2px}
+.vacio-icono{border-radius:50%}
+.metodos-opciones,.metodos-opciones button{border-radius:2px}
+.btn-copiar,.btn-copiar-todo{border-radius:2px}
+.btn-copiar-todo{border-color:var(--texto);color:var(--texto)}
+.btn-copiar-todo.copiado{background:var(--accion);color:var(--sobre-accion)}
+.metodos-opciones button[aria-checked="true"]{color:var(--texto);box-shadow:inset 0 0 0 1.5px var(--texto)}
+.toast{border-radius:2px;font-family:var(--fuente-mono);font-size:.85rem}
+.tema-menu{border-radius:4px}
+.whatsapp-flotante{border-radius:50%}
+/* Ajustes del diseño estilo álbum */
+.portada-plena::after{background:linear-gradient(rgba(22,18,14,.62),rgba(22,18,14,.72))}
+.portada-plena .portada-marca{font-size:clamp(3.4rem,10.5vw,8rem);line-height:.95;margin:0 0 .15em}
+.portada-plena p{color:#FBFAF7;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+.portada-plena .portada-lema{color:#FFE7A3}
+.portada-marca span,.logo-amp{font-family:"Caveat Brush","Caveat",cursive}
+.sello-texto{font-family:var(--fuente-texto);font-weight:700;font-size:11.5px;letter-spacing:1px}
+.pie-fondo{z-index:0}
+.pie-foto::before{z-index:1}
+.pie-contenido,.pie-doodle{z-index:2}
+.portada-plena .portada-lema{font-size:clamp(1.7rem,3.4vw,2.5rem);max-width:none;margin:0 auto .5em;line-height:1.2}
+.portada-plena .portada-texto{font-size:clamp(.92rem,1.6vw,1.05rem);max-width:52ch;margin:0 auto 1.6em}
+@media (max-width:340px){
+  .logo-sub{display:none}
+  .logo-texto{font-size:1.05rem}
+  .sello,.logo svg.sello{width:40px;height:40px}
+  .acciones{gap:4px}
+  .icono-btn{width:38px;height:38px}
+}
+
+/* =========================================================
+   26. ANIMACIONES DE PRODUCTOS Y GALERÍA
+   PC: al pasar el mouse. Celular: al pasar por el centro de la
+   pantalla y al tocar.
+   ========================================================= */
+/* Aparición al entrar en pantalla (PC y celular) */
+.js .aparecer{opacity:0;transform:translateY(28px) scale(.98)}
+.js .aparecer.visible{transition-delay:var(--retraso,0ms),var(--retraso,0ms),0s,0s,0s,0s}
+.js .aparecer.visible{opacity:1;transform:none}
+.producto.entrar{animation:entrarTarjeta .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 60ms)}
+@keyframes entrarTarjeta{from{opacity:0;transform:translateY(20px) scale(.97)}}
+
+/* ---------- Productos ---------- */
+.producto{transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1),translate .4s cubic-bezier(.2,.7,.2,1),scale .2s,box-shadow .4s}
+.producto-img{position:relative;overflow:hidden}
+.producto-img img{transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .5s}
+.producto-img::after{content:"Ver detalles";position:absolute;left:50%;bottom:14px;transform:translate(-50%,12px);opacity:0;background:#FBFAF7;color:#1E1C19;font-family:var(--fuente-mano);font-size:1.05rem;text-transform:uppercase;letter-spacing:.06em;padding:6px 16px;border-radius:2px;box-shadow:0 6px 18px rgba(0,0,0,.2);transition:opacity .35s,transform .45s cubic-bezier(.2,.7,.2,1);pointer-events:none;white-space:nowrap}
+.producto .etiqueta{transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+.producto h3{transition:color .3s}
+.btn-agregar,.btn-extras-card{transition:background .25s,color .25s,transform .2s}
+.btn-agregar:active,.btn-extras-card:active{transform:scale(.95)}
+
+/* Efecto activo: hover en PC, "en foco" o al tocar en el celular */
+@media (hover:hover){
+  .producto:hover{translate:0 -8px;box-shadow:0 22px 40px rgba(30,28,25,.16)}
+  .producto:hover .producto-img img{transform:scale(1.08) rotate(.6deg)}
+  .producto:hover .producto-img::after{opacity:1;transform:translate(-50%,0)}
+  .producto:hover .etiqueta{transform:rotate(-4deg) scale(1.06)}
+  .producto:hover h3{color:var(--principal)}
+}
+@media (hover:none){
+  .producto.en-foco{translate:0 -6px;box-shadow:0 18px 34px rgba(30,28,25,.16)}
+  .producto.en-foco .producto-img img{transform:scale(1.06)}
+  .producto.en-foco .producto-img::after{opacity:1;transform:translate(-50%,0)}
+  .producto.en-foco .etiqueta{transform:rotate(-4deg) scale(1.06)}
+  .producto.en-foco h3{color:var(--principal)}
+}
+.producto.tocado{scale:.97}
+
+/* ---------- Galería "Nuestro taller" ---------- */
+.galeria figure{position:relative;overflow:hidden;cursor:pointer;transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1),translate .45s cubic-bezier(.2,.7,.2,1),rotate .45s,scale .2s,box-shadow .45s;outline:none}
+.galeria figure img{transition:transform 1s cubic-bezier(.2,.7,.2,1),filter .5s}
+.galeria figure::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(to top,rgba(20,17,14,.72),rgba(20,17,14,0) 55%);opacity:0;transition:opacity .45s;pointer-events:none}
+.galeria figcaption{position:absolute;left:14px;right:14px;bottom:12px;z-index:2;color:#FBFAF7;font-family:var(--fuente-mano);font-size:1.35rem;line-height:1.15;transform:translateY(16px);opacity:0;transition:opacity .4s,transform .5s cubic-bezier(.2,.7,.2,1);pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.galeria figure::after{content:"";position:absolute;inset:10px;z-index:2;border:1.5px solid rgba(251,250,247,.75);opacity:0;transform:scale(1.04);transition:opacity .45s,transform .5s cubic-bezier(.2,.7,.2,1);pointer-events:none}
+@media (hover:hover){
+  .galeria figure:hover,.galeria figure:focus-visible{z-index:3;translate:0 -6px;rotate:-.6deg;box-shadow:0 22px 40px rgba(30,28,25,.22)}
+  .galeria figure:hover img,.galeria figure:focus-visible img{transform:scale(1.1)}
+  .galeria figure:hover::before,.galeria figure:hover::after,.galeria figure:hover figcaption,
+  .galeria figure:focus-visible::before,.galeria figure:focus-visible::after,.galeria figure:focus-visible figcaption{opacity:1;transform:none}
+  .galeria figure:nth-child(even):hover{rotate:.6deg}
+}
+@media (hover:none){
+  .galeria figure.en-foco{translate:0 -4px;box-shadow:0 16px 30px rgba(30,28,25,.22)}
+  .galeria figure.en-foco img{transform:scale(1.08)}
+  .galeria figure.en-foco::before,.galeria figure.en-foco::after,.galeria figure.en-foco figcaption{opacity:1;transform:none}
+  .galeria figcaption{font-size:1.15rem}
+}
+.galeria figure.tocado{scale:.97}
+
+/* Quien prefiere menos movimiento: sin animaciones */
+@media (prefers-reduced-motion:reduce){
+  .js .aparecer{opacity:1;transform:none}
+  .producto,.producto-img img,.galeria figure,.galeria figure img{transition:none!important;animation:none!important}
+}
+
+/* =========================================================
+   27. PRODUCTOS Y EXTRAS AGOTADOS (desde Supabase)
+   ========================================================= */
+.producto.agotado .producto-img img{filter:grayscale(.85) brightness(.95)}
+.etiqueta-agotado{background:#1E1C19!important;color:#FBFAF7!important}
+.btn-agotado{flex:1;background:var(--fondo-alt)!important;color:var(--texto-suave)!important;cursor:not-allowed;border:1px dashed var(--borde)}
+.modal-agotado{margin:0 0 16px;padding:10px 12px;border-left:3px solid var(--principal);background:var(--fondo-alt);font-family:var(--fuente-mono);font-size:.85rem;color:var(--texto)}
+#modalAgregar:disabled{opacity:.55;cursor:not-allowed}
+.extra-agotado{opacity:.55}
+.extra-agotado .extra-foto{filter:grayscale(1)}
+.extra-agotado small{color:var(--principal)!important;font-weight:600}
+.item-agotado .item-img{filter:grayscale(1);opacity:.7}
+.item-aviso{margin:2px 0 0;font-size:.74rem;font-weight:700;color:#C0283A}
+.aviso-agotado{margin:0 0 8px;font-size:.78rem;font-weight:600;color:#C0283A;text-align:center;font-family:var(--fuente-mono)}
+
+/* =========================================================
+   28. PANEL DE DIAGNÓSTICO (#diagnostico)
+   ========================================================= */
+#panelDiagnostico{position:fixed;inset:0;z-index:300;background:rgba(20,17,14,.6);display:grid;place-items:center;padding:16px}
+.diag-caja{background:var(--superficie);color:var(--texto);width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:6px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.3);font-family:var(--fuente-texto)}
+.diag-caja h2{margin:0 0 14px;font-size:1.8rem}
+.diag-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.diag-lista li{border:1px solid var(--borde);border-left-width:4px;border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.diag-lista strong{font-size:.95rem}
+.diag-lista span{font-family:var(--fuente-mono);font-size:.8rem;line-height:1.5;word-break:break-word;color:var(--texto-suave)}
+.diag-ok{border-left-color:#2E9E5B!important}
+.diag-error{border-left-color:#C0283A!important}
+.diag-error strong{color:#C0283A}
+.diag-espera{border-left-color:var(--amarillo)!important}
+.diag-botones{display:flex;gap:10px;margin-top:16px}
+.diag-botones button{flex:1;padding:11px;border-radius:2px;border:1.5px solid var(--texto);background:var(--superficie);color:var(--texto);font-weight:700;cursor:pointer}
+.diag-botones button:first-child{background:var(--accion);color:var(--sobre-accion)}

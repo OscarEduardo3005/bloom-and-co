@@ -999,6 +999,118 @@ $("#mensajeTarjeta").addEventListener("input", estadoTarjeta);
 $("#carritoTarjeta").addEventListener("toggle", () => { if ($("#carritoTarjeta").open) $("#mensajeTarjeta").focus({ preventScroll: true }); });
 
 /* =========================================================
+   DATOS DE ENTREGA — nombre, dirección, fecha e indicaciones
+   Aparecen en el carrito, debajo del mensaje para la tarjeta.
+   Se envían por WhatsApp y se guardan en Supabase, en las
+   columnas cliente, direccion, fecha_entrega y notas.
+   ========================================================= */
+const ENTREGA_CLAVE = "entrega-bloom";
+const LIMITE_ENTREGA = { cliente: 80, direccion: 300, notas: 300 };
+const dos = n => String(n).padStart(2, "0");
+const hoyISO = () => { const h = new Date(); return `${h.getFullYear()}-${dos(h.getMonth() + 1)}-${dos(h.getDate())}`; };
+const fechaLegible = iso => { const [a, m, d] = String(iso || "").split("-"); return a && m && d ? `${d}/${m}/${a}` : ""; };
+
+(function crearDatosEntrega() {
+  if ($("#datosEntrega")) return;
+
+  const estilo = document.createElement("style");
+  estilo.textContent = `
+    .carrito-entrega { border: 1px solid rgba(127,127,127,.28); border-radius: 14px; padding: 14px; margin: 12px 0; }
+    .carrito-entrega h3 { margin: 0 0 10px; font-size: .95rem; font-weight: 700; }
+    .entrega-campo { margin-bottom: 10px; }
+    .entrega-campo:last-child { margin-bottom: 0; }
+    .entrega-campo label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 4px; }
+    .entrega-campo label span { font-weight: 400; opacity: .65; }
+    .entrega-campo input, .entrega-campo textarea {
+      width: 100%; box-sizing: border-box; padding: 9px 11px; border-radius: 10px;
+      border: 1px solid rgba(127,127,127,.4); background: rgba(127,127,127,.06);
+      color: inherit; font: inherit; font-size: 16px; line-height: 1.35;
+    }
+    .entrega-campo textarea { resize: vertical; min-height: 58px; }
+    .entrega-campo input:focus, .entrega-campo textarea:focus { outline: 2px solid currentColor; outline-offset: 1px; }
+    .entrega-campo [aria-invalid="true"] { border-color: #c0392b; }
+    .entrega-error { color: #c0392b; font-size: .78rem; margin: 4px 0 0; }
+  `;
+  document.head.appendChild(estilo);
+
+  const s = document.createElement("section");
+  s.id = "datosEntrega";
+  s.className = "carrito-entrega";
+  s.setAttribute("aria-labelledby", "entregaTitulo");
+  s.innerHTML = `
+    <h3 id="entregaTitulo">Datos de entrega</h3>
+    <div class="entrega-campo">
+      <label for="entregaNombre">Tu nombre</label>
+      <input id="entregaNombre" type="text" autocomplete="name" maxlength="${LIMITE_ENTREGA.cliente}" placeholder="Nombre y apellido">
+      <p class="entrega-error" id="errorEntregaNombre" hidden></p>
+    </div>
+    <div class="entrega-campo">
+      <label for="entregaDireccion">Dirección de entrega</label>
+      <textarea id="entregaDireccion" rows="2" autocomplete="street-address" maxlength="${LIMITE_ENTREGA.direccion}" placeholder="Sector, calle, casa o edificio y un punto de referencia"></textarea>
+      <p class="entrega-error" id="errorEntregaDireccion" hidden></p>
+    </div>
+    <div class="entrega-campo">
+      <label for="entregaFecha">Fecha de entrega</label>
+      <input id="entregaFecha" type="date" min="${hoyISO()}">
+      <p class="entrega-error" id="errorEntregaFecha" hidden></p>
+    </div>
+    <div class="entrega-campo">
+      <label for="entregaNotas">Indicaciones <span>(opcional)</span></label>
+      <textarea id="entregaNotas" rows="2" maxlength="${LIMITE_ENTREGA.notas}" placeholder="Hora preferida, a quién entregar, si es sorpresa…"></textarea>
+    </div>`;
+
+  const tarjeta = $("#carritoTarjeta");
+  if (tarjeta) tarjeta.insertAdjacentElement("afterend", s);
+  else $("#enviarPedido").insertAdjacentElement("beforebegin", s);
+
+  // Recuerda lo que escribió el cliente aunque cierre el carrito o recargue la página
+  let guardado = {};
+  try { guardado = JSON.parse(localStorage.getItem(ENTREGA_CLAVE)) || {}; } catch (e) { guardado = {}; }
+  $("#entregaNombre").value = guardado.cliente || "";
+  $("#entregaDireccion").value = guardado.direccion || "";
+  $("#entregaFecha").value = guardado.fecha_entrega && guardado.fecha_entrega >= hoyISO() ? guardado.fecha_entrega : "";
+  $("#entregaNotas").value = guardado.notas || "";
+
+  s.addEventListener("input", e => {
+    const campo = e.target;
+    campo.removeAttribute("aria-invalid");
+    const error = campo.parentElement.querySelector(".entrega-error");
+    if (error) error.hidden = true;
+    try { localStorage.setItem(ENTREGA_CLAVE, JSON.stringify(leerEntrega())); } catch (err) {}
+  });
+})();
+
+/* Lee los datos de entrega tal como se guardan en Supabase */
+function leerEntrega() {
+  const valor = (id, max) => $(id).value.trim().slice(0, max);
+  return {
+    cliente: valor("#entregaNombre", LIMITE_ENTREGA.cliente),
+    direccion: valor("#entregaDireccion", LIMITE_ENTREGA.direccion),
+    fecha_entrega: $("#entregaFecha").value || null,
+    notas: valor("#entregaNotas", LIMITE_ENTREGA.notas) || null,
+  };
+}
+
+/* Revisa los campos obligatorios. Devuelve el primer campo con error, o null si todo está bien. */
+function validarEntrega() {
+  const d = leerEntrega();
+  $("#entregaFecha").min = hoyISO();
+  const reglas = [
+    ["#entregaNombre",    "#errorEntregaNombre",    !d.cliente ? "Escribe tu nombre." : d.cliente.length < 2 ? "Escribe tu nombre completo." : ""],
+    ["#entregaDireccion", "#errorEntregaDireccion", !d.direccion ? "Escribe la dirección de entrega." : d.direccion.length < 8 ? "Agrega más detalles de la dirección." : ""],
+    ["#entregaFecha",     "#errorEntregaFecha",     !d.fecha_entrega ? "Elige la fecha de entrega." : d.fecha_entrega < hoyISO() ? "La fecha no puede ser anterior a hoy." : ""],
+  ];
+  let primero = null;
+  reglas.forEach(([campo, error, texto]) => {
+    $(error).textContent = texto;
+    $(error).hidden = !texto;
+    if (texto) { $(campo).setAttribute("aria-invalid", "true"); primero = primero || $(campo); }
+    else $(campo).removeAttribute("aria-invalid");
+  });
+  return primero;
+}
+
+/* =========================================================
    CONEXIÓN CON SUPABASE
    ========================================================= */
 const supabaseActivo = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -1067,7 +1179,7 @@ function codigoPedido() {
   return `BC-${String(h.getMonth() + 1).padStart(2, "0")}${String(h.getDate()).padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 /* Registra el pedido en Supabase (la página no puede leer los pedidos, solo crearlos) */
-function guardarPedido(codigo, total, tarjeta) {
+function guardarPedido(codigo, total, tarjeta, entrega = {}) {
   const pago = dividirPago(total);
   const items = carrito.map(x => {
     const i = infoItem(x), unidad = precioUnidad(x);
@@ -1084,6 +1196,8 @@ function guardarPedido(codigo, total, tarjeta) {
     abono_usd: PORCENTAJE_ABONO < 100 ? pago.abono : redondear(total),
     resto_usd: PORCENTAJE_ABONO < 100 ? pago.resto : 0,
     metodo_pago: metodoActual()?.nombre || null, mensaje_tarjeta: tarjeta || null,
+    cliente: entrega.cliente || null, direccion: entrega.direccion || null,
+    fecha_entrega: entrega.fecha_entrega || null, notas: entrega.notas || null,
   };
   // WhatsApp se abre en otra pestaña, así que esta página sigue abierta y el registro se completa
   return sbFetch("pedidos", { method: "POST", body: JSON.stringify(fila), headers: { Prefer: "return=minimal" } })
@@ -1165,6 +1279,15 @@ window.addEventListener("hashchange", () => { if (location.hash === "#diagnostic
 
 /* Enviar pedido por WhatsApp */
 $("#enviarPedido").addEventListener("click", async () => {
+  // Los datos de entrega son obligatorios
+  const campoConError = validarEntrega();
+  if (campoConError) {
+    campoConError.scrollIntoView({ block: "center", behavior: "smooth" });
+    campoConError.focus({ preventScroll: true });
+    aviso("Completa tus datos de entrega para enviar el pedido.");
+    return;
+  }
+  const entrega = leerEntrega();
   let total = 0;
   const lineas = carrito.map(x => {
     const i = infoItem(x), sub = precioUnidad(x) * x.cantidad;
@@ -1188,7 +1311,8 @@ $("#enviarPedido").addEventListener("click", async () => {
     (metodoActual() ? `\n\nMétodo de pago: ${metodoActual().nombre}` +
       `\nMonto del abono: ${montoMetodo(metodoActual(), PORCENTAJE_ABONO < 100 ? dividirPago(total).abono : total)}` +
       (metodoActual().notaWhatsApp ? `\n${metodoActual().notaWhatsApp}` : "") : "") +
-    `\n\nMi nombre:\nDirección de entrega:\nFecha de entrega:`;
+    `\n\nMi nombre: ${entrega.cliente}\nDirección de entrega: ${entrega.direccion}\nFecha de entrega: ${fechaLegible(entrega.fecha_entrega)}` +
+    (entrega.notas ? `\nIndicaciones: ${entrega.notas}` : "");
   const urlWhatsApp = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
   if (!supabaseActivo()) { window.open(urlWhatsApp, "_blank"); return; }
 
@@ -1201,7 +1325,7 @@ $("#enviarPedido").addEventListener("click", async () => {
     try { ventana.document.title = "Bloom & Co"; ventana.document.body.innerHTML = '<p style="font-family:system-ui,sans-serif;text-align:center;margin-top:40vh;color:#555">Abriendo WhatsApp…</p>'; } catch (e) {}
   }
   const espera = new Promise(r => setTimeout(() => r(false), 5000));
-  await Promise.race([guardarPedido(codigo, total, tarjeta), espera]);
+  await Promise.race([guardarPedido(codigo, total, tarjeta, entrega), espera]);
   boton.disabled = false; boton.innerHTML = textoBoton;
   if (ventana && !ventana.closed) ventana.location.href = urlWhatsApp;
   else window.location.href = urlWhatsApp; // si el navegador bloqueó la pestaña nueva

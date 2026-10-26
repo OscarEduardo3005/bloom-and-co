@@ -202,7 +202,16 @@ const CREADOR = {
     // genero: "m" (el girasol) o "f" (la rosa), para escribir bien el color: "rosa roja", "lirio rojo"
     { id:"girasol",   nombre:"Girasol",      plural:"Girasoles",       genero:"m", precio:3, imagen:"img/creador/flor-girasol.jpg" },
     { id:"pequena",   nombre:"Flor pequeña", plural:"Flores pequeñas", genero:"f", precio:1.5, imagen:"img/creador/flor-pequena.jpg" },
-    { id:"rosa",      nombre:"Rosa",         plural:"Rosas",           genero:"f", precio:3 },
+    { id:"rosa",      nombre:"Rosa",         plural:"Rosas",           genero:"f", precio:3, imagen:"img/creador/rosa-rojo.jpg",
+      fotosPorColor: {
+        amarillo: "img/creador/rosa-amarillo.jpg",
+        naranja:  "img/creador/rosa-naranja.jpg",
+        rojo:     "img/creador/rosa-rojo.jpg",
+        rosado:   "img/creador/rosa-rosado.jpg",
+        morado:   "img/creador/rosa-morado.jpg",
+        azul:     "img/creador/rosa-azul.jpg",
+        blanco:   "img/creador/rosa-blanco.jpg",
+      } },
     { id:"lirio",     nombre:"Lirio",        plural:"Lirios",          genero:"m", precio:4, imagen:"img/creador/flor-lirio.jpg",
       fotosPorColor: {
         azul:     "img/creador/flor-lirio.jpg",

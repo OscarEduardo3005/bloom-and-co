@@ -185,6 +185,9 @@ const EXTRAS = [
             minFlores / maxFlores: límites de flores.
    flores:  precio por cada flor. imagen: foto real de esa flor
             (carpeta img/creador/). Si no tiene, se dibuja.
+            fotosPorColor: foto de la flor en cada color. Cuando el
+            cliente elige un color, se muestra esa foto. Si un color
+            no tiene foto, se usa "imagen" con un punto del color.
    colores: colores disponibles para las flores (hex = color
             que se dibuja en la vista previa).
    extras:  cuáles de la lista EXTRAS se ofrecen aquí.
@@ -200,7 +203,16 @@ const CREADOR = {
     { id:"girasol",   nombre:"Girasol",      plural:"Girasoles",       genero:"m", precio:3, imagen:"img/creador/flor-girasol.jpg" },
     { id:"pequena",   nombre:"Flor pequeña", plural:"Flores pequeñas", genero:"f", precio:1.5, imagen:"img/creador/flor-pequena.jpg" },
     { id:"rosa",      nombre:"Rosa",         plural:"Rosas",           genero:"f", precio:3 },
-    { id:"lirio",     nombre:"Lirio",        plural:"Lirios",          genero:"m", precio:4, imagen:"img/creador/flor-lirio.jpg" },
+    { id:"lirio",     nombre:"Lirio",        plural:"Lirios",          genero:"m", precio:4, imagen:"img/creador/flor-lirio.jpg",
+      fotosPorColor: {
+        azul:     "img/creador/flor-lirio.jpg",
+        amarillo: "img/creador/lirio-amarillo.jpg",
+        naranja:  "img/creador/lirio-naranja.jpg",
+        rojo:     "img/creador/lirio-rojo.jpg",
+        rosado:   "img/creador/lirio-rosado.jpg",
+        morado:   "img/creador/lirio-morado.jpg",
+        blanco:   "img/creador/lirio-blanco.jpg",
+      } },
     { id:"tulipan",   nombre:"Tulipán",      plural:"Tulipanes",       genero:"m", precio:2.5 },
   ],
   colores: [
@@ -825,10 +837,18 @@ let cr = { tipo:"ramo", flor:"girasol", color:"amarillo", flores:{}, papel:"blan
 const chip = (attr, item, activo, extra = "") =>
   `<button class="cr-chip${item.hex ? " cr-chip-color" : ""}" role="radio" aria-checked="${activo}" data-${attr}="${item.id}">${item.hex ? `<i style="background:${item.hex}"></i>` : ""}${item.nombre}${extra}</button>`;
 
+/* Foto de una flor en el color elegido (o la foto general si ese color no tiene) */
+function fotoFlor(florId, colorId) {
+  const f = crBuscar("flores", florId);
+  return (f?.fotosPorColor && f.fotosPorColor[colorId]) || f?.imagen || "";
+}
+/* Precarga las fotos por color para que cambien al instante al elegir un color */
+CREADOR.flores.forEach(f => Object.values(f.fotosPorColor || {}).forEach(src => { const im = new Image(); im.src = src; }));
+
 function muestraFlor(florId, colorId) {
-  const f = crBuscar("flores", florId), c = crBuscar("colores", colorId);
-  return f.imagen
-    ? `<span class="cr-muestra cr-muestra-foto"><img src="${f.imagen}" alt=""><i style="background:${c.hex}"></i></span>`
+  const c = crBuscar("colores", colorId), foto = fotoFlor(florId, colorId);
+  return foto
+    ? `<span class="cr-muestra cr-muestra-foto"><img src="${foto}" alt=""><i style="background:${c.hex}"></i></span>`
     : `<span class="cr-muestra"><svg viewBox="0 0 60 60">${svgFlor(florId, c.hex, 30, 30, 26)}</svg></span>`;
 }
 /* Referencia real de la creación: foto del tipo elegido + fotos de las flores
@@ -841,7 +861,8 @@ function vistaReal(cfg) {
   const max = 8, extra = flores.length - max;
   const fichas = flores.slice(0, max).map(([k, n]) => {
     const [f, c] = k.split("|"), fl = crBuscar("flores", f), co = crBuscar("colores", c);
-    const cara = fl.imagen ? `<img src="${fl.imagen}" alt="">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
+    const foto = fotoFlor(f, c);
+    const cara = foto ? `<img src="${foto}" alt="">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
     return `<span class="cr-real-flor" title="${n} ${nombreFlor(f, c, n).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${n}</b></span>`;
   }).join("") + (extra > 0 ? `<span class="cr-real-flor cr-real-mas">+${extra}</span>` : "");
   let pres = "";
@@ -875,7 +896,7 @@ function pintarCreador() {
   // 2. Flores
   $("#crFlorTipo").innerHTML = CREADOR.flores.map(f => `
     <button class="cr-chip cr-chip-flor" role="radio" aria-checked="${f.id === cr.flor}" data-cr-flor="${f.id}">
-      ${f.imagen ? `<img src="${f.imagen}" alt="">` : `<svg viewBox="0 0 60 60" aria-hidden="true">${svgFlor(f.id, crBuscar("colores", cr.color).hex, 30, 30, 26)}</svg>`}
+      ${fotoFlor(f.id, cr.color) ? `<img src="${fotoFlor(f.id, cr.color)}" alt="">` : `<svg viewBox="0 0 60 60" aria-hidden="true">${svgFlor(f.id, crBuscar("colores", cr.color).hex, 30, 30, 26)}</svg>`}
       ${f.nombre} <small>${usd(f.precio)}</small>
     </button>`).join("");
   $("#crFlorColor").innerHTML = CREADOR.colores.map(c => chip("cr-color", c, c.id === cr.color)).join("");

@@ -240,7 +240,16 @@ const CREADOR = {
         morado:   "img/creador/lirio-morado.jpg",
         blanco:   "img/creador/lirio-blanco.jpg",
       } },
-    { id:"tulipan",   nombre:"Tulipán",      plural:"Tulipanes",       genero:"m", precio:2.5 },
+    { id:"tulipan",   nombre:"Tulipán",      plural:"Tulipanes",       genero:"m", precio:2.5, imagen:"img/creador/tulipan-rojo.jpg",
+      fotosPorColor: {
+        amarillo: "img/creador/tulipan-amarillo.jpg",
+        naranja:  "img/creador/tulipan-naranja.jpg",
+        rojo:     "img/creador/tulipan-rojo.jpg",
+        rosado:   "img/creador/tulipan-rosado.jpg",
+        morado:   "img/creador/tulipan-morado.jpg",
+        azul:     "img/creador/tulipan-azul.jpg",
+        blanco:   "img/creador/tulipan-blanco.jpg",
+      } },
   ],
   colores: [
     { id:"amarillo", nombre:"amarillo", hex:"#F6C21C" },

@@ -989,394 +989,565 @@ function muestraFlor(florId, colorId) {
    Muestra la maqueta de lo que lleva armado el cliente y, debajo,
    una ficha por cada flor con su foto, su color y su cantidad. */
 
-/* ========================================================================
-   MAQUETA 3D — Vista previa realista con Three.js
-   Se carga solo la primera vez que el cliente abre el creador.
-   Si el navegador no soporta WebGL, se usa la maqueta SVG de respaldo.
-   ======================================================================== */
-const THREE_CDN = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
-let _3dReady = false, _3dFailed = false, _3dLoading = false;
-let _bouquet = null;
-
-function cargarThree() {
-  if (_3dReady || _3dLoading) return Promise.resolve();
-  _3dLoading = true;
-  return new Promise((res, rej) => {
-    if (window.THREE) { _3dReady = true; _3dLoading = false; return res(); }
-    const s = document.createElement("script");
-    s.src = THREE_CDN;
-    s.onload = () => { _3dReady = true; _3dLoading = false; res(); };
-    s.onerror = () => { _3dFailed = true; _3dLoading = false; rej(); };
-    document.head.appendChild(s);
-  });
+/* Fichas con la foto, el color y la cantidad de cada flor elegida */
+function fichasFlores(cfg) {
+  const flores = Object.entries(cfg.flores || {});
+  const max = 8, extra = flores.length - max;
+  const fichas = flores.slice(0, max).map(([k, q]) => {
+    const [f, c] = k.split("|"), co = crBuscar("colores", c), foto = fotoFlor(f, c);
+    const cara = foto ? `<img src="${foto}" alt="" loading="lazy">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
+    return `<span class="mq-ficha" title="${q} ${nombreFlor(f, c, q).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${q}</b></span>`;
+  }).join("") + (extra > 0 ? `<span class="mq-ficha mq-mas">+${extra}</span>` : "");
+  return fichas || `<span class="mq-vacio">Elige una flor y un color, y toca “Agregar”.</span>`;
 }
+/* =========================================================
+   VISTA 3D DEL RAMO
+   Motor con Three.js: cada flor está modelada en 3D según su
+   tipo (girasol, flor pequeña, rosa, lirio, tulipán) y su color,
+   con textura de felpa como la del limpiapipas. Dibuja una flor
+   por cada unidad que pide el cliente, ni una más ni una menos.
+   ========================================================= */
+function MOTOR3D(THREE) {
+  const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+  const AUREO = Math.PI * (3 - Math.sqrt(5));
+  const azar = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const ARRIBA = V(0, 1, 0);
 
-/* Clase que maneja la escena 3D dentro del contenedor del preview */
-class Bouquet3D {
-  constructor(container) {
-    this.el = container;
-    this.texCache = {};
-    this.disposed = false;
-    this.rotY = 0;
-    this.dragging = false;
-    this.lastX = 0;
-    this.targetRot = 0;
-    this.init();
-  }
-
-  init() {
-    const T = window.THREE;
-    const W = this.el.clientWidth || 320;
-    const H = W;
-
-    this.scene = new T.Scene();
-
-    this.camera = new T.PerspectiveCamera(32, 1, 0.1, 100);
-    this.camera.position.set(0, 2.8, 9.5);
-    this.camera.lookAt(0, 1.2, 0);
-
-    this.renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(W, H);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.sortObjects = true;
-    const cv = this.renderer.domElement;
-    cv.style.display = "block";
-    cv.style.width = "100%";
-    cv.style.height = "auto";
-    cv.style.borderRadius = "14px";
-    cv.style.touchAction = "pan-y";
-    this.el.appendChild(cv);
-
-    // Luces
-    this.scene.add(new T.AmbientLight(0xffffff, 0.72));
-    const dir = new T.DirectionalLight(0xffffff, 0.65);
-    dir.position.set(4, 6, 5);
-    this.scene.add(dir);
-    const rim = new T.DirectionalLight(0xeee8dd, 0.3);
-    rim.position.set(-3, 2, -4);
-    this.scene.add(rim);
-
-    // Grupo del ramo
-    this.group = new T.Group();
-    this.scene.add(this.group);
-
-    this.setupDrag(cv);
-    this.tick();
-  }
-
-  setupDrag(cv) {
-    let startRot = 0;
-    cv.addEventListener("pointerdown", e => {
-      if (e.pointerType === "touch" && e.isPrimary === false) return;
-      this.dragging = true; this.lastX = e.clientX; startRot = this.rotY;
-      cv.setPointerCapture(e.pointerId);
-    });
-    cv.addEventListener("pointermove", e => {
-      if (!this.dragging) return;
-      this.rotY = startRot + (e.clientX - this.lastX) * 0.012;
-    });
-    cv.addEventListener("pointerup", () => { this.dragging = false; });
-    cv.addEventListener("pointercancel", () => { this.dragging = false; });
-  }
-
-  tick() {
-    if (this.disposed) return;
-    requestAnimationFrame(() => this.tick());
-    if (!this.dragging) this.rotY += 0.004;
-    this.group.rotation.y += (this.rotY - this.group.rotation.y) * 0.12;
-    this.renderer.render(this.scene, this.camera);
-  }
-
-  resize() {
-    const W = this.el.clientWidth || 320;
-    this.renderer.setSize(W, W);
-  }
-
-  dispose() {
-    this.disposed = true;
-    this.renderer.dispose();
-    this.renderer.domElement.remove();
-  }
-
-  /* --- Materiales y texturas --- */
-  matColor(hex) {
-    return new THREE.MeshLambertMaterial({ color: new THREE.Color(hex) });
-  }
-
-  loadTex(url) {
-    if (this.texCache[url]) return this.texCache[url];
-    const tex = new THREE.TextureLoader().load(url);
-    tex.encoding = THREE.sRGBEncoding || 3001;
-    this.texCache[url] = tex;
-    return tex;
-  }
-
-  /* --- Construir la escena --- */
-  update(cfg) {
-    const T = window.THREE;
-    // Limpiar
-    while (this.group.children.length) {
-      const c = this.group.children[0];
-      this.group.remove(c);
-      c.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+  /* ---------- Texturas generadas por código (no hay que subir archivos) ---------- */
+  function textura(N, fn, rep = [1, 1]) {
+    const d = new Uint8Array(N * N * 4);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const v = Math.max(0, Math.min(255, Math.round(fn(x / N, y / N, x, y) * 255))), o = (y * N + x) * 4;
+      d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255;
     }
-
-    const fl = listaFlores(cfg, 60);
-    const n = fl.length;
-
-    if (cfg.tipo === "ramo") this.buildRamo(cfg, fl, n);
-    else if (cfg.tipo === "maceta") this.buildMaceta(cfg, fl, n);
-    else this.buildSuelta(cfg, fl, n);
+    const t = new THREE.DataTexture(d, N, N, THREE.RGBAFormat);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(rep[0], rep[1]);
+    t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true;
+    t.needsUpdate = true;
+    return t;
   }
-
-  /* Posiciones en domo (espiral de Fibonacci) */
-  domePositions(n, rx, ry, rz, cy) {
-    if (n === 0) return [];
-    if (n === 1) return [[0, cy + ry * 0.3, 0]];
-    const PHI = Math.PI * (3 - Math.sqrt(5));
-    const pts = [];
-    for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) / n;
-      const d = Math.sqrt(t);
-      const a = i * PHI;
-      pts.push([rx * d * Math.cos(a), cy + ry * (1 - t * 0.7), rz * d * Math.sin(a)]);
+  const ruido = (x, y) => azar(x * 0.913 + y * 7.17, 3.1);
+  // Felpa: cordones paralelos (como las vueltas del limpiapipas) + pelusa fina
+  const TEX = {
+    petalo: textura(128, (u, v, x, y) => .74 + .18 * Math.pow(.5 + .5 * Math.cos(u * Math.PI * 2), .6) + .08 * (ruido(x, y) - .5), [5, 1]),
+    hoja:   textura(128, (u, v, x, y) => .74 + .18 * Math.pow(.5 + .5 * Math.cos(u * Math.PI * 2), .6) + .08 * (ruido(x, y) - .5), [4, 1]),
+    tallo:  textura(64,  (u, v, x, y) => .8 + .2 * (ruido(x, y) - .5), [3, 6]),
+    centro: textura(64,  (u, v, x, y) => .62 + .38 * Math.pow(.5 + .5 * Math.sin(u * 40) * Math.sin(v * 40), 2) * (.7 + .3 * ruido(x, y)), [3, 3]),
+    papel:  textura(128, (u, v, x, y) => .9 + .07 * Math.sin(u * 23 + Math.sin(v * 9) * 2) * Math.sin(v * 17) + .03 * (ruido(x, y) - .5), [1, 1]),
+    tejido: textura(64,  (u, v, x, y) => .7 + .22 * Math.pow(Math.abs(Math.sin(u * Math.PI * 2 + (v * 2 % 1 < .5 ? .5 : -.5) * Math.sin(v * Math.PI * 2))), .5) + .08 * (ruido(x, y) - .5), [26, 7]),
+    tierra: textura(64,  (u, v, x, y) => .55 + .45 * ruido(x, y), [4, 4]),
+  };
+  const sombraTex = (() => {
+    const N = 64, d = new Uint8Array(N * N * 4);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const r = Math.hypot(x / (N - 1) - .5, y / (N - 1) - .5) * 2, o = (y * N + x) * 4;
+      d[o] = d[o + 1] = d[o + 2] = 40; d[o + 3] = Math.round(Math.pow(Math.max(0, 1 - r), 1.8) * 150);
     }
-    return pts.sort((a, b) => a[2] - b[2]);
+    const t = new THREE.DataTexture(d, N, N, THREE.RGBAFormat); t.needsUpdate = true; return t;
+  })();
+
+  /* ---------- Materiales (uno por color, reutilizados) ---------- */
+  const mats = {};
+  function felpa(hex, tex = TEX.petalo, extra = {}) {
+    const k = hex + tex.uuid + JSON.stringify(extra);
+    if (!mats[k]) mats[k] = new THREE.MeshStandardMaterial({ color: lin(hex), roughness: .92, metalness: 0, map: tex, bumpMap: tex, bumpScale: .55, side: THREE.DoubleSide, ...extra });
+    return mats[k];
   }
 
-  addFlowerSprite(f, x, y, z, scale) {
-    const T = window.THREE;
-    const foto = fotoFlor(f.f, f.c);
-    let mat;
-    if (foto) {
-      const tex = this.loadTex(foto);
-      mat = new T.SpriteMaterial({ map: tex, depthWrite: false });
+  /* ---------- Geometría ---------- */
+  function unir(lista) {
+    const partes = lista.map(g => g.index ? g.toNonIndexed() : g);
+    const total = partes.reduce((a, g) => a + g.attributes.position.count, 0);
+    const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2);
+    let o = 0;
+    for (const g of partes) {
+      pos.set(g.attributes.position.array, o * 3);
+      nor.set(g.attributes.normal.array, o * 3);
+      if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+      o += g.attributes.position.count;
+    }
+    const out = new THREE.BufferGeometry();
+    out.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    out.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    out.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    out.computeBoundingSphere();
+    return out;
+  }
+  /* Pétalo con volumen: crece hacia +Y, su cara interior mira hacia -Z.
+     Son dos caras que se juntan en el borde, como una almohadilla de felpa. */
+  function petalo({ L, W, forma, curva = 0, copa = 0, grosor = .035, segL = 12, segW = 6 }) {
+    const cara = lado => {
+      const g = new THREE.PlaneGeometry(1, 1, segW, segL), p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const u = p.getX(i) * 2, t = p.getY(i) + .5;
+        let w;
+        if (forma === "lanza") w = Math.pow(Math.sin(Math.PI * Math.min(1, t)), .7) * (1 - .3 * t);
+        else if (forma === "tira") w = Math.min(1, t * 5) * Math.sqrt(Math.max(0, 1 - Math.pow(t, 6)));
+        else w = Math.pow(Math.max(0, 1 - Math.pow(2 * t - 1, 2)), .45) * (.55 + .45 * t);
+        const bulto = grosor * Math.sqrt(Math.max(0, 1 - u * u)) * Math.sqrt(Math.max(0, w));
+        p.setXYZ(i, -lado * u * W / 2 * w, t * L, curva * L * t * t - copa * W * .5 * u * u * w - lado * bulto);
+      }
+      g.computeVertexNormals();
+      return g;
+    };
+    return unir([cara(1), cara(-1)]);
+  }
+  /* Coloca una pieza alrededor del eje de la flor: ángulo phi, apertura alfa (0 = plana, 90° = cerrada) */
+  function colocar(g, { phi = 0, alfa = 0, r0 = 0, y0 = 0 }) {
+    const m = new THREE.Matrix4().makeRotationY(phi)
+      .multiply(new THREE.Matrix4().makeTranslation(0, y0, r0))
+      .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2 - alfa));
+    return g.clone().applyMatrix4(m);
+  }
+
+  /* ---------- Las cinco flores ---------- */
+  const FLORES = {};
+  function modelo(tipo) {
+    if (FLORES[tipo]) return FLORES[tipo];
+    let petalos = [], centro = null, colorCentro = null, escala = 1, alto = .25;
+    if (tipo === "girasol") {
+      const a = petalo({ L: .44, W: .15, forma: "tira", curva: .08, copa: .35 });
+      const b = petalo({ L: .38, W: .14, forma: "tira", curva: .12, copa: .35 });
+      for (let i = 0; i < 16; i++) petalos.push(colocar(a, { phi: i * Math.PI / 8, alfa: .2, r0: .21 }));
+      for (let i = 0; i < 16; i++) petalos.push(colocar(b, { phi: (i + .5) * Math.PI / 8, alfa: .38, r0: .18, y0: -.02 }));
+      centro = new THREE.SphereGeometry(.25, 28, 14); centro.scale(1, .42, 1); centro.translate(0, .03, 0);
+      colorCentro = "#3A2213"; escala = 1.12; alto = .15;
+    } else if (tipo === "pequena") {
+      const a = petalo({ L: .42, W: .2, forma: "lanza", curva: .16, copa: .45 });
+      for (let i = 0; i < 6; i++) petalos.push(colocar(a, { phi: i * Math.PI / 3, alfa: .62 + (i % 2) * .1, r0: .04 }));
+      const est = [];
+      for (let i = 0; i < 7; i++) {
+        const ang = i * AUREO, inc = .25 + .2 * azar(i, 4);
+        const pal = new THREE.CylinderGeometry(.008, .01, .2, 5); pal.translate(0, .1, 0);
+        const pun = new THREE.SphereGeometry(.026, 8, 6); pun.translate(0, .2, 0);
+        const m = new THREE.Matrix4().makeRotationY(ang).multiply(new THREE.Matrix4().makeRotationX(inc));
+        est.push(pal.applyMatrix4(m), pun.applyMatrix4(m));
+      }
+      centro = unir(est); colorCentro = "#F3EFE6"; escala = .8; alto = .28;
+    } else if (tipo === "lirio") {
+      const a = petalo({ L: .68, W: .27, forma: "lanza", curva: .42, copa: .5 });
+      const b = petalo({ L: .62, W: .25, forma: "lanza", curva: .36, copa: .5 });
+      for (let i = 0; i < 3; i++) petalos.push(colocar(a, { phi: i * 2 * Math.PI / 3, alfa: .52, r0: .05 }));
+      for (let i = 0; i < 3; i++) petalos.push(colocar(b, { phi: (i + .5) * 2 * Math.PI / 3, alfa: .64, r0: .04, y0: .01 }));
+      const bol = [];
+      for (let i = 0; i < 5; i++) { const s = new THREE.SphereGeometry(.06, 10, 8); s.translate(Math.cos(i * 1.26) * .05, .08 + (i % 2) * .03, Math.sin(i * 1.26) * .05); bol.push(s); }
+      centro = unir(bol); colorCentro = "#E8AE0C"; escala = 1.08; alto = .32;
+    } else if (tipo === "rosa") {
+      for (let i = 0; i < 12; i++) {
+        const k = i / 11;
+        const g = petalo({ L: .2 + .17 * k, W: .28 + .2 * k, forma: "ovalo", curva: -.28 + .5 * k, copa: 1.15 - .4 * k, grosor: .04 });
+        petalos.push(colocar(g, { phi: i * 2.4, alfa: 1.42 - .8 * k, r0: .02 + .1 * k, y0: -.05 * k }));
+      }
+      const b = new THREE.SphereGeometry(.1, 16, 12); b.scale(1, 1.25, 1); b.translate(0, .1, 0); petalos.push(b);
+      escala = .98; alto = .3;
+    } else if (tipo === "tulipan") {
+      const a = petalo({ L: .5, W: .44, forma: "ovalo", curva: -.24, copa: 1, segW: 8, grosor: .045 });
+      const b = petalo({ L: .47, W: .42, forma: "ovalo", curva: -.28, copa: 1, segW: 8, grosor: .045 });
+      for (let i = 0; i < 3; i++) petalos.push(colocar(a, { phi: i * 2 * Math.PI / 3, alfa: 1.14, r0: .09 }));
+      for (let i = 0; i < 3; i++) petalos.push(colocar(b, { phi: (i + .5) * 2 * Math.PI / 3, alfa: 1.24, r0: .06 }));
+      escala = .92; alto = .55;
+    }
+    const geo = unir(petalos), pp = geo.attributes.position;
+    let radio = 0;
+    for (let i = 0; i < pp.count; i++) radio = Math.max(radio, Math.hypot(pp.getX(i), pp.getZ(i)));
+    return (FLORES[tipo] = { petalos: geo, centro, colorCentro, escala, alto, radio: radio * escala });
+  }
+  const HOJA = petalo({ L: .9, W: .32, forma: "lanza", curva: .32, copa: .45, grosor: .03 });
+  const TALLO = (() => { const g = new THREE.CylinderGeometry(.024, .028, 1, 7, 1); g.translate(0, .5, 0); return g; })();
+
+  function crearCabeza(f, c) {
+    const m = modelo(f), hex = crBuscar("colores", c)?.hex || "#CCCCCC";
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(m.petalos, felpa(hex)));
+    if (m.centro) g.add(new THREE.Mesh(m.centro, felpa(m.colorCentro, TEX.centro, { bumpScale: .9 })));
+    return g;
+  }
+
+  /* ---------- Escena ---------- */
+  const escena = new THREE.Scene();
+  escena.add(new THREE.HemisphereLight(0xfff6ea, 0x8f7f6b, .8));
+  const sol = new THREE.DirectionalLight(0xffffff, 1.05); sol.position.set(3, 6, 5); escena.add(sol);
+  const relleno = new THREE.DirectionalLight(0xffe9d6, .35); relleno.position.set(-5, 2, -2); escena.add(relleno);
+  const contra = new THREE.DirectionalLight(0xffffff, .3); contra.position.set(0, 3, -6); escena.add(contra);
+
+  const camara = new THREE.PerspectiveCamera(30, 1, .1, 100);
+  const raiz = new THREE.Group(); escena.add(raiz);           // gira con el arrastre
+  const capaFlores = new THREE.Group(), capaBase = new THREE.Group();
+  raiz.add(capaBase, capaFlores);
+
+  const sombra = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: sombraTex, transparent: true, depthWrite: false }));
+  sombra.rotation.x = -Math.PI / 2; escena.add(sombra);
+
+  /* ---------- Papel del ramo (con volantes y más alto por detrás) ---------- */
+  function papelGeo() {
+    const NP = 72, NV = 22, g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array((NP + 1) * (NV + 1) * 3), 3));
+    const uv = new Float32Array((NP + 1) * (NV + 1) * 2), idx = [];
+    for (let j = 0; j <= NV; j++) for (let i = 0; i <= NP; i++) {
+      const o = (j * (NP + 1) + i) * 2; uv[o] = i / NP * 3; uv[o + 1] = j / NV * 2;
+      if (i < NP && j < NV) { const a = j * (NP + 1) + i, b = a + NP + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    }
+    g.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); g.setIndex(idx);
+    g.userData = { NP, NV };
+    return g;
+  }
+  function moldearPapel(g, { rRim, yRim, yBase, rBase, subida, ondas, amp, fase }) {
+    const { NP, NV } = g.userData, p = g.attributes.position;
+    for (let j = 0; j <= NV; j++) {
+      const v = j / NV, r = rBase + (rRim - rBase) * Math.pow(v, 1.35), y0 = yBase + (yRim - yBase) * v;
+      for (let i = 0; i <= NP; i++) {
+        const ph = i / NP * Math.PI * 2, atras = (1 - Math.cos(ph)) / 2;   // 0 al frente (+Z), 1 atrás
+        const rr = r + amp * Math.sin(ondas * ph + fase) * Math.pow(v, 4);
+        p.setXYZ(j * (NP + 1) + i, rr * Math.sin(ph), y0 + subida * atras * Math.pow(v, 3), rr * Math.cos(ph));
+      }
+    }
+    p.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingSphere();
+  }
+
+  /* ---------- Estado ---------- */
+  const flores = new Map();          // clave → { cabeza, tallo, s, v, sale, pos, quat }
+  let base = null, tipoBase = null, hojas = [];
+  let objetivo = { cy: 0, h: 6, w: 4, abajo: -3 }, enc = null;
+  let paramsPapel = null, papelActual = null;
+
+  function limpiarBase() {
+    capaBase.children.slice().forEach(o => { capaBase.remove(o); o.traverse(x => { if (x.geometry && x.geometry !== HOJA && x.geometry !== TALLO) x.geometry.dispose(); }); });
+    base = null; hojas = []; papelActual = null;
+  }
+
+  /* Lista de flores, una por unidad, con clave estable por tipo+color+número */
+  function unidades(cfg) {
+    const grupos = Object.entries(cfg.flores || {}).map(([k, n]) => { const [f, c] = k.split("|"); return { f, c, n, j: 0 }; });
+    const out = [];
+    while (grupos.some(g => g.j < g.n)) for (const g of grupos) if (g.j < g.n) { out.push({ f: g.f, c: g.c, k: `${g.f}|${g.c}|${g.j}` }); g.j++; }
+    return out;
+  }
+
+  /* Posiciones en domo (espiral de Fibonacci sobre un casquete) */
+  function domo(lista, { yBajo, ancho = 1 }) {
+    const n = lista.length;
+    if (!n) return { pos: [], rPie: .9, yAlto: yBajo + .3, rMed: .5 };
+    const radios = lista.map(u => modelo(u.f).radio), rMed = radios.reduce((a, b) => a + b, 0) / n;
+    if (n === 1) return { pos: [{ p: V(0, yBajo, 0), nrm: V(0, 1, 0) }], rPie: radios[0] * .9, yAlto: yBajo + modelo(lista[0].f).alto + .3, rMed };
+    // cada flor ocupa su círculo, con un poco de encimado como en un ramo apretado
+    const area = radios.reduce((a, r) => a + Math.PI * Math.pow(r * .7, 2), 0);
+    const tMax = Math.min(1.15, .3 + .13 * Math.sqrt(n)) * ancho;
+    const R = Math.max(rMed * 1.1, Math.sqrt(area / (2 * Math.PI * (1 - Math.cos(tMax)))));
+    const yc = yBajo - R * Math.cos(tMax);
+    const pos = lista.map((u, i) => {
+      const t = (i + .5) / n, ct = 1 - t * (1 - Math.cos(tMax)), st = Math.sqrt(1 - ct * ct);
+      const ph = i * AUREO + (azar(i, 7) - .5) * .25;
+      const nrm = V(st * Math.sin(ph), ct, st * Math.cos(ph));
+      return { p: V(0, yc, 0).addScaledVector(nrm, R + (azar(i, 9) - .5) * .08 * rMed), nrm };
+    });
+    return { pos, rPie: R * Math.sin(tMax) + rMed * .7, yAlto: yc + R + rMed * .6, rMed };
+  }
+
+  function hojaEn(x, y, z, psi, elev, esc = 1) {
+    const m = new THREE.Mesh(HOJA, felpa("#3F7F2E", TEX.hoja));
+    m.position.set(x, y, z); m.rotation.set(0, psi, 0); m.rotateX(Math.PI / 2 - elev); m.scale.setScalar(esc);
+    capaBase.add(m); hojas.push(m); return m;
+  }
+  function lazoEn(y, radio, hex) {
+    const mat = new THREE.MeshStandardMaterial({ color: lin(hex), roughness: .5, metalness: 0, side: THREE.DoubleSide });
+    const g = new THREE.Group();
+    const banda = new THREE.Mesh(new THREE.TorusGeometry(radio + .02, .04, 8, 48), mat); banda.rotation.x = Math.PI / 2; g.add(banda);
+    const frente = new THREE.Group(); frente.position.set(0, 0, radio + .06); g.add(frente);
+    for (const sx of [-1, 1]) {
+      const ojo = new THREE.Mesh(new THREE.TorusGeometry(.19, .05, 8, 28), mat);
+      ojo.scale.set(1, .58, .45); ojo.position.set(sx * .19, .03, 0); ojo.rotation.z = sx * .45; frente.add(ojo);
+      const cola = new THREE.Mesh(new THREE.BoxGeometry(.075, .58, .018), mat);
+      cola.position.set(sx * .11, -.3, .02); cola.rotation.z = sx * .28; frente.add(cola);
+    }
+    const nudo = new THREE.Mesh(new THREE.SphereGeometry(.075, 14, 10), mat); nudo.scale.set(1.1, 1, .8); frente.add(nudo);
+    g.position.y = y; capaBase.add(g); return g;
+  }
+
+  /* ---------- Actualizar con lo que eligió el cliente ---------- */
+  const VERDE = "#3F7F2E";
+  function actualizar(cfg, { instantaneo = false } = {}) {
+    const tipo = cfg.tipo || "ramo", lista = unidades(cfg), n = lista.length;
+    const variante = tipo + (tipo === "suelta" ? (n > 1 ? "+" : "1") : "");
+    const hexLazo = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
+    let L, abajo, ancho, nudo;
+
+    // 1. Dónde va cada flor
+    if (tipo === "maceta") {
+      L = domo(lista, { yBajo: .62, ancho: .85 });
+      abajo = -1.75; nudo = V(0, -.15, 0);
+      ancho = Math.max(1.12 * Math.max(1, L.rPie / 1.15), L.rPie);
+    } else if (variante === "suelta1") {
+      L = { pos: n ? [{ p: V(0, 2.15, .12), nrm: V(0, Math.cos(.55), Math.sin(.55)) }] : [], rPie: .8, yAlto: 2.15 + (n ? modelo(lista[0].f).radio * 1.9 * .8 : .4) };
+      abajo = -2.5; nudo = V(0, -2.5, 0); ancho = 1;
     } else {
-      const canvas = document.createElement("canvas");
-      canvas.width = 64; canvas.height = 64;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = f.hex; ctx.beginPath(); ctx.arc(32, 32, 30, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0,.2)"; ctx.lineWidth = 2; ctx.stroke();
-      const tex = new T.CanvasTexture(canvas);
-      mat = new T.SpriteMaterial({ map: tex });
-    }
-    const sprite = new T.Sprite(mat);
-    sprite.position.set(x, y, z);
-    sprite.scale.set(scale, scale, 1);
-    this.group.add(sprite);
-    return sprite;
-  }
-
-  addStem(x1, y1, z1, x2, y2, z2) {
-    const T = window.THREE;
-    const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
-    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    const geo = new T.CylinderGeometry(0.035, 0.04, len, 6);
-    const mat = new T.MeshLambertMaterial({ color: 0x4E8B3A });
-    const mesh = new T.Mesh(geo, mat);
-    mesh.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
-    mesh.lookAt(x2, y2, z2);
-    mesh.rotateX(Math.PI / 2);
-    this.group.add(mesh);
-  }
-
-  addLeaf(x, y, z, rot) {
-    const T = window.THREE;
-    const shape = new T.Shape();
-    shape.moveTo(0, 0); shape.quadraticCurveTo(0.15, 0.4, 0, 0.7);
-    shape.quadraticCurveTo(-0.15, 0.4, 0, 0);
-    const geo = new T.ShapeGeometry(shape);
-    const mat = new T.MeshLambertMaterial({ color: 0x4E8B3A, side: T.DoubleSide });
-    const mesh = new T.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.rotation.set(0, rot, (Math.random() - 0.5) * 0.4 - 0.2);
-    mesh.scale.set(0.7, 0.7, 0.7);
-    this.group.add(mesh);
-  }
-
-  buildRamo(cfg, fl, n) {
-    const T = window.THREE;
-    const papelHex = crBuscar("papeles", cfg.papel)?.hex || "#F4F1EA";
-    const lazoHex = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
-
-    // Cono del papel (apunta hacia abajo)
-    const coneGeo = new T.CylinderGeometry(0.1, 2.4, 4.8, 32, 1, true);
-    const coneMat = new T.MeshLambertMaterial({ color: papelHex, side: T.DoubleSide });
-    const cone = new T.Mesh(coneGeo, coneMat);
-    cone.position.y = -1.0;
-    this.group.add(cone);
-
-    // Borde superior del cono
-    const rimGeo = new T.TorusGeometry(2.4, 0.06, 8, 32);
-    const rimMat = new T.MeshLambertMaterial({ color: papelHex });
-    const rim = new T.Mesh(rimGeo, rimMat);
-    rim.position.y = 1.4;
-    rim.rotation.x = Math.PI / 2;
-    this.group.add(rim);
-
-    // Lazo
-    const bowMat = new T.MeshLambertMaterial({ color: lazoHex });
-    const bowL = new T.Mesh(new T.SphereGeometry(0.28, 12, 12), bowMat);
-    bowL.position.set(-0.35, 0.1, 0);
-    bowL.scale.set(1.2, 0.8, 0.6);
-    this.group.add(bowL);
-    const bowR = new T.Mesh(new T.SphereGeometry(0.28, 12, 12), bowMat);
-    bowR.position.set(0.35, 0.1, 0);
-    bowR.scale.set(1.2, 0.8, 0.6);
-    this.group.add(bowR);
-    const bowC = new T.Mesh(new T.SphereGeometry(0.14, 8, 8), bowMat);
-    bowC.position.set(0, 0.1, 0);
-    this.group.add(bowC);
-    // Cintas del lazo
-    const ribGeo = new T.CylinderGeometry(0.04, 0.03, 1.2, 6);
-    for (const sx of [-1, 1]) {
-      const rib = new T.Mesh(ribGeo, bowMat);
-      rib.position.set(sx * 0.12, -0.5, 0);
-      rib.rotation.z = sx * 0.25;
-      this.group.add(rib);
+      L = domo(lista, { yBajo: 1.3 });
+      const rBorde = Math.max(.75, L.rPie - L.rMed * .3);
+      if (tipo === "ramo") {
+        const yRim = 1.08, yBase = yRim - (1.75 + .62 * rBorde);
+        paramsPapel = { rRim: rBorde, yRim, yBase };
+        abajo = yBase; nudo = V(0, yBase + .55 * (yRim - yBase), 0);
+      } else { abajo = -2.5; nudo = V(0, -.3, 0); }
+      ancho = Math.max(rBorde + .4, L.rPie);
     }
 
-    if (!n) return;
-
-    // Flores
-    const flowerSize = Math.max(0.55, Math.min(1.6, 4.2 / Math.sqrt(n + 0.8)));
-    const spread = Math.min(2.0, 0.5 + n * 0.12);
-    const pts = this.domePositions(n, spread, 1.5, spread, 1.8);
-
-    // Hojas entre las flores
-    for (let i = 0; i < Math.min(n, 8); i++) {
-      const a = i * Math.PI * 2 / Math.min(n, 8);
-      this.addLeaf(Math.cos(a) * (spread + 0.3), 1.6 + Math.random() * 0.5, Math.sin(a) * (spread + 0.3), a + Math.PI);
+    // 2. Base: papel, maceta o tallo (se rehace solo si cambia el tipo)
+    if (tipoBase !== variante) {
+      limpiarBase(); tipoBase = variante;
+      if (tipo === "ramo") {
+        const mat = () => new THREE.MeshStandardMaterial({ roughness: .85, side: THREE.DoubleSide, map: TEX.papel, bumpMap: TEX.papel, bumpScale: .35 });
+        const ext = new THREE.Mesh(papelGeo(), mat()), int = new THREE.Mesh(papelGeo(), mat());
+        capaBase.add(ext, int);
+        base = { ext, int };
+      } else if (tipo === "maceta") {
+        const prof = [];
+        for (let i = 0; i <= 14; i++) { const v = i / 14; prof.push(new THREE.Vector2(.74 + .3 * v + .05 * Math.sin(v * Math.PI), -1.75 + 1.68 * v)); }
+        const mat = new THREE.MeshStandardMaterial({ roughness: .95, side: THREE.DoubleSide, map: TEX.tejido, bumpMap: TEX.tejido, bumpScale: .8 });
+        const pot = new THREE.Mesh(new THREE.LatheGeometry(prof, 72), mat);
+        const borde = new THREE.Mesh(new THREE.TorusGeometry(1.06, .1, 14, 72), mat); borde.rotation.x = Math.PI / 2; borde.position.y = -.05;
+        const fondo = new THREE.Mesh(new THREE.CircleGeometry(.74, 40), mat); fondo.rotation.x = Math.PI / 2; fondo.position.y = -1.75;
+        const tierra = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), new THREE.MeshStandardMaterial({ color: lin("#4A3426"), roughness: 1, map: TEX.tierra, bumpMap: TEX.tierra, bumpScale: 1 }));
+        tierra.rotation.x = -Math.PI / 2; tierra.position.y = -.14;
+        capaBase.add(pot, borde, fondo, tierra);
+        base = { pot };
+        for (let i = 0; i < 5; i++) { const ps = i * 2 * Math.PI / 5 + .3; hojaEn(Math.sin(ps) * .5, -.12, Math.cos(ps) * .5, ps, .45, .85); }
+      } else if (variante === "suelta1") {
+        const tallo = new THREE.Mesh(TALLO, felpa(VERDE, TEX.tallo));
+        tallo.position.set(0, -2.5, 0);
+        tallo.quaternion.setFromUnitVectors(ARRIBA, V(0, 4.65, .12).normalize());
+        tallo.scale.set(1.6, 4.65, 1.6);
+        capaBase.add(tallo); base = { tallo };
+        hojaEn(0, -.75, 0, -Math.PI / 2, .7, 1.05); hojaEn(0, .15, .02, Math.PI / 2, .85, .9);
+        base.lazo = lazoEn(-1.3, .045, hexLazo);
+      } else {
+        base = {};
+      }
     }
 
-    // Tallos y flores
-    pts.forEach((p, i) => {
-      const f = fl[i];
-      if (!f) return;
-      this.addStem(p[0] * 0.2, 0.3, p[2] * 0.2, p[0], p[1] - flowerSize * 0.4, p[2]);
-      this.addFlowerSprite(f, p[0], p[1], p[2], flowerSize);
+    // 3. Colores y tamaños de la base
+    if (tipo !== "ramo") paramsPapel = null;
+    else if (!papelActual || instantaneo) papelActual = { ...paramsPapel };
+    if (tipo === "ramo") {
+      const hp = crBuscar("papeles", cfg.papel)?.hex || "#F4F1EA";
+      base.ext.material.color.copy(lin(hp));
+      const claro = new THREE.Color(hp).getHSL({}).l > .35;            // en papeles oscuros, la capa interior va del mismo tono
+      base.int.material.color.copy(lin(hp).lerp(new THREE.Color(1, 1, 1), claro ? .07 : 0));
+      if (base.lazo) capaBase.remove(base.lazo);
+      const P = paramsPapel, yL = P.yBase + .3 * (P.yRim - P.yBase);
+      const rL = .2 + (P.rRim - .2) * Math.pow((yL - P.yBase) / (P.yRim - P.yBase), 1.35);
+      base.lazo = lazoEn(yL, rL, hexLazo);
+      hojas.forEach(h => capaBase.remove(h)); hojas = [];
+      const nh = n ? Math.max(5, Math.min(11, Math.round(n * .3) + 4)) : 6;
+      for (let j = 0; j < nh; j++) {
+        const ps = j * 2 * Math.PI / nh + azar(j, 5) * .4, rr = P.rRim * .82;
+        hojaEn(Math.sin(ps) * rr, P.yRim - .05 + azar(j, 6) * .2, Math.cos(ps) * rr, ps, .65 + azar(j, 8) * .35, .9 + .3 * azar(j, 2));
+      }
+    } else if (tipo === "maceta") {
+      base.pot.material.color.copy(lin(crBuscar("macetas", cfg.maceta)?.hex || "#6B4A32"));
+      const k = Math.max(1, L.rPie / 1.15);
+      capaBase.scale.set(k, 1, k);
+    } else if (variante !== "suelta1") {
+      if (base.lazo) capaBase.remove(base.lazo);
+      base.lazo = lazoEn(-.45, .12 + .02 * n, hexLazo);
+    }
+    if (tipo !== "maceta") capaBase.scale.set(1, 1, 1);
+
+    // 4. Flores: aparecen las nuevas, se van las quitadas, el resto se acomoda
+    const quedan = new Set(lista.map(u => u.k));
+    for (const [k, fl] of flores) if (!quedan.has(k)) fl.sale = true;
+    lista.forEach((u, i) => {
+      let fl = flores.get(u.k);
+      const d = L.pos[i];
+      if (!fl) {
+        const cabeza = crearCabeza(u.f, u.c), tallo = new THREE.Mesh(TALLO, felpa(VERDE, TEX.tallo));
+        capaFlores.add(cabeza, tallo);
+        fl = { cabeza, tallo, s: instantaneo ? 1 : 0, v: 0, sale: false };
+        flores.set(u.k, fl);
+        cabeza.position.copy(instantaneo ? d.p : d.p.clone().addScaledVector(d.nrm, .7));
+      }
+      fl.sale = false;
+      fl.pos = d.p.clone();
+      fl.quat = new THREE.Quaternion().setFromUnitVectors(ARRIBA, d.nrm.clone().normalize())
+        .multiply(new THREE.Quaternion().setFromAxisAngle(ARRIBA, azar(i, 11) * Math.PI * 2));
+      fl.esc = variante === "suelta1" ? 1.9 : tipo === "maceta" ? 1.05 : 1;
+      fl.nudo = nudo.clone();
+      fl.sinTallo = variante === "suelta1";
+      if (instantaneo) { fl.cabeza.position.copy(fl.pos); fl.cabeza.quaternion.copy(fl.quat); }
     });
+
+    // 5. Encuadre: la cámara siempre muestra el arreglo completo
+    objetivo = { arriba: L.yAlto + .15, abajo, ancho };
+    sombra.position.y = abajo - .03;
+    if (instantaneo) { enc = null; paso(1); paso(1); }
   }
 
-  buildMaceta(cfg, fl, n) {
-    const T = window.THREE;
-    const macHex = crBuscar("macetas", cfg.maceta)?.hex || "#6B4A32";
-
-    // Maceta
-    const potGeo = new T.CylinderGeometry(1.2, 0.8, 1.8, 32);
-    const potMat = new T.MeshLambertMaterial({ color: macHex });
-    const pot = new T.Mesh(potGeo, potMat);
-    pot.position.y = -1.5;
-    this.group.add(pot);
-    // Borde de la maceta
-    const brimGeo = new T.CylinderGeometry(1.35, 1.2, 0.3, 32);
-    const brim = new T.Mesh(brimGeo, potMat);
-    brim.position.y = -0.45;
-    this.group.add(brim);
-
-    if (!n) return;
-
-    const flowerSize = Math.max(0.7, Math.min(1.5, 3.8 / Math.sqrt(n + 0.5)));
-    const spread = Math.min(1.3, 0.3 + n * 0.18);
-    const pts = this.domePositions(n, spread, 1.2, spread, 0.6);
-
-    for (let i = 0; i < Math.min(n, 5); i++) {
-      const a = i * Math.PI * 2 / Math.min(n, 5);
-      this.addLeaf(Math.cos(a) * (spread + 0.2), 0.4, Math.sin(a) * (spread + 0.2), a + Math.PI);
+  /* ---------- Animación (se llama en cada cuadro) ---------- */
+  function paso(dt) {
+    dt = Math.min(dt, .05);
+    const suave = 1 - Math.exp(-dt * 9);
+    for (const [k, fl] of flores) {
+      const meta = fl.sale ? 0 : 1;
+      fl.v += (meta - fl.s) * 170 * dt; fl.v *= Math.exp(-dt * 15); fl.s += fl.v * dt;   // resorte: crece con un pequeño rebote
+      if (fl.sale && fl.s < .02) { capaFlores.remove(fl.cabeza, fl.tallo); flores.delete(k); continue; }
+      if (fl.pos) { fl.cabeza.position.lerp(fl.pos, suave); fl.cabeza.quaternion.slerp(fl.quat, suave); }
+      fl.cabeza.scale.setScalar(Math.max(0, fl.s) * (fl.esc || 1));
+      fl.tallo.visible = !fl.sinTallo;
+      if (!fl.sinTallo) {
+        const a = fl.nudo, b = fl.cabeza.position, dir = b.clone().sub(a), largo = dir.length();
+        const g = Math.max(.01, Math.min(1, fl.s));
+        fl.tallo.position.copy(a);
+        fl.tallo.quaternion.setFromUnitVectors(ARRIBA, dir.normalize());
+        fl.tallo.scale.set(g, Math.max(.001, largo), g);
+      }
     }
-
-    pts.forEach((p, i) => {
-      const f = fl[i]; if (!f) return;
-      this.addStem(p[0] * 0.15, -0.3, p[2] * 0.15, p[0], p[1] - flowerSize * 0.35, p[2]);
-      this.addFlowerSprite(f, p[0], p[1], p[2], flowerSize);
-    });
-  }
-
-  buildSuelta(cfg, fl, n) {
-    const T = window.THREE;
-    const lazoHex = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
-
-    // Tallo principal
-    const stemGeo = new T.CylinderGeometry(0.06, 0.06, 5, 8);
-    const stemMat = new T.MeshLambertMaterial({ color: 0x4E8B3A });
-    const stem = new T.Mesh(stemGeo, stemMat);
-    stem.position.y = -0.5;
-    this.group.add(stem);
-
-    // Hojas
-    this.addLeaf(-0.4, -0.8, 0, -0.4);
-    this.addLeaf(0.4, 0.0, 0, 0.4);
-
-    // Lazo pequeño
-    const bowMat = new T.MeshLambertMaterial({ color: lazoHex });
-    for (const sx of [-1, 1]) {
-      const b = new T.Mesh(new T.SphereGeometry(0.16, 8, 8), bowMat);
-      b.position.set(sx * 0.22, -1.4, 0);
-      b.scale.set(1.2, 0.7, 0.5);
-      this.group.add(b);
+    // El papel crece o se achica con el ramo, sin saltos
+    if (base && base.ext && paramsPapel) {
+      const pa = papelActual, P = paramsPapel;
+      const falta = Math.abs(pa.rRim - P.rRim) + Math.abs(pa.yBase - P.yBase);
+      if (falta > .002 || !base.ext.userData.listo) {
+        for (const k of ["rRim", "yRim", "yBase"]) pa[k] += (P[k] - pa[k]) * suave;
+        moldearPapel(base.ext.geometry, { rRim: pa.rRim + .12, yRim: pa.yRim, yBase: pa.yBase, rBase: .2, subida: .38 + .12 * pa.rRim, ondas: 9, amp: .09, fase: .4 });
+        moldearPapel(base.int.geometry, { rRim: pa.rRim * .97, yRim: pa.yRim - .04, yBase: pa.yBase + .02, rBase: .19, subida: .32 + .1 * pa.rRim, ondas: 7, amp: .07, fase: 1.9 });
+        base.ext.userData.listo = true;
+      }
     }
-
-    if (!n) return;
-    const f = fl[0];
-    this.addFlowerSprite(f, 0, 2.3, 0, 2.0);
+    // Cámara: encuadra todo el arreglo, un poco desde arriba
+    const meta = { cy: (objetivo.arriba + objetivo.abajo) / 2, h: objetivo.arriba - objetivo.abajo, w: objetivo.ancho * 2 };
+    if (!enc) enc = { ...meta };
+    for (const k of ["cy", "h", "w"]) enc[k] += (meta[k] - enc[k]) * (1 - Math.exp(-dt * 5));
+    const tan = Math.tan(THREE.MathUtils.degToRad(camara.fov / 2)), elev = .32;
+    const dist = Math.max((enc.h / 2 * 1.12) / tan, (enc.w / 2 * 1.15) / (tan * camara.aspect)) + enc.w * .35;
+    camara.position.set(0, enc.cy + Math.sin(elev) * dist, Math.cos(elev) * dist);
+    camara.lookAt(0, enc.cy + .05, 0);
+    sombra.scale.set(objetivo.ancho * 2.4, objetivo.ancho * 2.4, 1);
   }
+
+  return { escena, camara, raiz, actualizar, paso, cuantas: () => [...flores.values()].filter(f => !f.sale).length };
 }
 
-/* Inicializa o actualiza el visor 3D. Devuelve true si está activo, false si hay que usar SVG. */
-function actualizar3D(cfg) {
-  const container = $("#crPreview");
-  if (!container || !_3dReady || _3dFailed) return false;
-  try {
-    if (!_bouquet) {
-      container.innerHTML = "";
-      _bouquet = new Bouquet3D(container);
+/* ---------- Visor 3D en la página ----------
+   Mientras Three.js se descarga se ve la maqueta plana; cuando está
+   listo, se reemplaza por la vista 3D. Si el navegador no tiene
+   WebGL, se queda la maqueta plana y nada se rompe. */
+const VISOR3D = (() => {
+  const CDN = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+  let estado = "inicial";            // inicial | cargando | listo | fallo
+  let motor = null, renderer = null, lienzo = null, ultimoCfg = null, iniciado = false;
+  let giro = -.45, velGiro = 0, arrastrando = false, ultimoX = 0, ultimoT = 0, quietoDesde = -1e9, visible = true, tAnterior = 0;
+  const reducido = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const tactil = () => window.matchMedia && matchMedia("(pointer: coarse)").matches;
+
+  function soportaWebGL() {
+    try { const c = document.createElement("canvas"); return !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl"))); }
+    catch (e) { return false; }
+  }
+  function cargar() {
+    if (estado !== "inicial") return;
+    if (!soportaWebGL()) { estado = "fallo"; return; }
+    estado = "cargando";
+    const listo = () => {
+      if (estado !== "cargando") return;
+      try { iniciar(); estado = "listo"; if (ultimoCfg) pintar(ultimoCfg); }
+      catch (e) { console.warn("Vista 3D no disponible:", e); estado = "fallo"; }
+    };
+    if (window.THREE && THREE.WebGLRenderer) return listo();
+    const s = document.createElement("script");
+    s.src = CDN; s.async = true; s.crossOrigin = "anonymous";
+    const plazo = setTimeout(() => { if (estado === "cargando") estado = "fallo"; }, 20000);
+    s.onload = () => { clearTimeout(plazo); listo(); };
+    s.onerror = () => { clearTimeout(plazo); estado = "fallo"; };
+    document.head.appendChild(s);
+  }
+  function iniciar() {
+    motor = MOTOR3D(THREE);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.setClearColor(0x000000, 0);
+    const cv = renderer.domElement;
+    cv.setAttribute("role", "img");
+    cv.setAttribute("aria-label", "Vista 3D de tu arreglo. Arrastra para girarlo.");
+    // Girar con el dedo o el mouse (el desplazamiento vertical de la página sigue funcionando)
+    cv.addEventListener("pointerdown", e => { arrastrando = true; ultimoX = e.clientX; ultimoT = performance.now(); velGiro = 0; try { cv.setPointerCapture(e.pointerId); } catch (x) {} });
+    cv.addEventListener("pointermove", e => {
+      if (!arrastrando) return;
+      const ahora = performance.now(), dx = e.clientX - ultimoX, d = dx * .011;
+      giro += d; velGiro = d / Math.max(.008, (ahora - ultimoT) / 1000);
+      ultimoX = e.clientX; ultimoT = ahora;
+    });
+    const soltar = () => { if (arrastrando) { arrastrando = false; quietoDesde = performance.now(); } };
+    cv.addEventListener("pointerup", soltar); cv.addEventListener("pointercancel", soltar); cv.addEventListener("lostpointercapture", soltar);
+    document.addEventListener("visibilitychange", () => { tAnterior = 0; });
+    window.addEventListener("resize", ajustar);
+    requestAnimationFrame(bucle);
+  }
+  function ajustar() {
+    if (!lienzo || !renderer) return;
+    const w = lienzo.clientWidth || 360, h = lienzo.clientHeight || Math.round(w * 1.08);
+    renderer.setSize(w, h, false);
+    motor.camara.aspect = w / h; motor.camara.updateProjectionMatrix();
+  }
+  function montar(caja) {
+    caja.innerHTML = `
+      <div class="v3d">
+        <div class="v3d-lienzo"></div>
+        <span class="v3d-tag">Vista 3D · ${tactil() ? "desliza" : "arrastra"} para girar</span>
+        <span class="v3d-pres" hidden></span>
+        <span class="v3d-cuenta"></span>
+        <span class="v3d-vacio" hidden>Agrega flores para ver tu arreglo en 3D</span>
+      </div>
+      <div class="mq-fichas v3d-fichas"></div>`;
+    lienzo = caja.querySelector(".v3d-lienzo");
+    lienzo.appendChild(renderer.domElement);
+    if (window.ResizeObserver) new ResizeObserver(ajustar).observe(lienzo);
+    if (window.IntersectionObserver) new IntersectionObserver(e => { visible = e[0].isIntersecting; }).observe(lienzo);
+    ajustar();
+  }
+  function bucle(t) {
+    requestAnimationFrame(bucle);
+    if (!lienzo || !lienzo.isConnected || !visible || document.hidden) { tAnterior = 0; return; }
+    const dt = tAnterior ? Math.min(.05, (t - tAnterior) / 1000) : 1 / 60; tAnterior = t;
+    if (!arrastrando) {
+      if (!reducido() && performance.now() - quietoDesde > 1800) velGiro += (.3 - velGiro) * Math.min(1, dt * 1.2);   // giro automático suave
+      else velGiro *= Math.exp(-dt * 3);                                                                         // inercia al soltar
+      giro += velGiro * dt;
     }
-    _bouquet.update(cfg);
+    motor.raiz.rotation.y = giro;
+    motor.paso(dt);
+    renderer.render(motor.escena, motor.camara);
+  }
+  function etiquetas(caja, cfg) {
+    const n = totalFlores(cfg), q = s => caja.querySelector(s);
+    q(".v3d-cuenta").textContent = `${n} ${n === 1 ? "flor" : "flores"}`;
+    q(".v3d-vacio").hidden = n > 0;
+    let pres = "";
+    if (cfg.tipo === "ramo") { const pa = crBuscar("papeles", cfg.papel); if (pa) pres = `<i style="background:${pa.hex}"></i>Papel ${pa.nombre.toLowerCase()}`; }
+    if (cfg.tipo === "maceta") { const ma = crBuscar("macetas", cfg.maceta); if (ma) pres = `<i style="background:${ma.hex}"></i>Maceta ${ma.nombre.toLowerCase()}`; }
+    q(".v3d-pres").innerHTML = pres; q(".v3d-pres").hidden = !pres;
+    q(".v3d-fichas").innerHTML = fichasFlores(cfg);
+  }
+  /* Devuelve true si la vista 3D se encargó del panel; false = usar la maqueta plana */
+  function pintar(cfg) {
+    ultimoCfg = JSON.parse(JSON.stringify(cfg));
+    if (estado === "inicial") cargar();
+    if (estado !== "listo") return false;
+    const caja = document.getElementById("crPreview");
+    if (!caja) return false;
+    if (!lienzo || !caja.contains(lienzo)) montar(caja);
+    motor.actualizar(ultimoCfg);
+    etiquetas(caja, ultimoCfg);
     return true;
-  } catch (e) {
-    console.warn("3D no disponible:", e);
-    _3dFailed = true;
-    if (_bouquet) { _bouquet.dispose(); _bouquet = null; }
-    return false;
   }
-}
+  return { pintar, estado: () => estado, flores: () => (motor ? motor.cuantas() : null) };
+})();
 
-/* Etiquetas flotantes sobre el canvas 3D */
-function etiquetas3D(cfg) {
-  const t = crBuscar("tipos", cfg.tipo), n = totalFlores(cfg);
-  const flores = Object.entries(cfg.flores || {});
-  const max = 8, extra = flores.length - max;
-  const fichas = flores.slice(0, max).map(([k, q]) => {
-    const [f, c] = k.split("|"), co = crBuscar("colores", c), foto = fotoFlor(f, c);
-    const cara = foto ? `<img src="${foto}" alt="" loading="lazy">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
-    return `<span class="mq-ficha" title="${q} ${nombreFlor(f, c, q).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${q}</b></span>`;
-  }).join("") + (extra > 0 ? `<span class="mq-ficha mq-mas">+${extra}</span>` : "");
-  let pres = "";
-  if (cfg.tipo === "ramo") { const pa = crBuscar("papeles", cfg.papel); if (pa) pres = `<i style="background:${pa.hex}"></i>Papel ${pa.nombre.toLowerCase()}`; }
-  if (cfg.tipo === "maceta") { const ma = crBuscar("macetas", cfg.maceta); if (ma) pres = `<i style="background:${ma.hex}"></i>Maceta ${ma.nombre.toLowerCase()}`; }
-  return `<div class="mq3d-overlay">
-    <span class="mq-etiqueta">Vista 3D · Arrastra para girar</span>
-    ${pres ? `<span class="mq-pres">${pres}</span>` : ""}
-    <span class="mq-cuenta">${n} ${n === 1 ? "flor" : "flores"}</span>
-  </div><div class="mq-fichas">${fichas || `<span class="mq-vacio">Elige una flor y un color, y toca "Agregar".</span>`}</div>`;
-}
-
-
+/* Maqueta plana: se ve mientras carga la 3D, o si el navegador no tiene WebGL */
 function vistaReal(cfg) {
-  /* Si Three.js ya cargó, actualiza el canvas 3D y devuelve las etiquetas */
-  if (_3dReady && !_3dFailed && typeof Bouquet3D !== "undefined" && actualizar3D(cfg)) {
-    return `<div class="mq mq-3d">${etiquetas3D(cfg)}</div>`;
-  }
-  /* Respaldo: maqueta SVG plana */
   const t = crBuscar("tipos", cfg.tipo), n = totalFlores(cfg);
-  const flores = Object.entries(cfg.flores || {});
-  const max = 8, extra = flores.length - max;
-  const fichas = flores.slice(0, max).map(([k, q]) => {
-    const [f, c] = k.split("|"), co = crBuscar("colores", c), foto = fotoFlor(f, c);
-    const cara = foto ? `<img src="${foto}" alt="" loading="lazy">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
-    return `<span class="mq-ficha" title="${q} ${nombreFlor(f, c, q).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${q}</b></span>`;
-  }).join("") + (extra > 0 ? `<span class="mq-ficha mq-mas">+${extra}</span>` : "");
+  const fichas = fichasFlores(cfg);
   let pres = "";
   if (cfg.tipo === "ramo") { const pa = crBuscar("papeles", cfg.papel); if (pa) pres = `<i style="background:${pa.hex}"></i>Papel ${pa.nombre.toLowerCase()}`; }
   if (cfg.tipo === "maceta") { const ma = crBuscar("macetas", cfg.maceta); if (ma) pres = `<i style="background:${ma.hex}"></i>Maceta ${ma.nombre.toLowerCase()}`; }
@@ -1385,7 +1556,7 @@ function vistaReal(cfg) {
     <span class="mq-etiqueta">Así va quedando</span>
     ${pres ? `<span class="mq-pres">${pres}</span>` : ""}
     <span class="mq-cuenta">${n} ${n === 1 ? "flor" : "flores"}</span>
-    <div class="mq-fichas">${fichas || `<span class="mq-vacio">Elige una flor y un color, y toca \u201CAgregar\u201D.</span>`}</div>
+    <div class="mq-fichas">${fichas}</div>
   </div>`;
 }
 /* Miniatura (carrito y barra del celular) */
@@ -1422,11 +1593,23 @@ function miniReal(cfg) {
     .mq-mini { display: block; width: 100%; }
     .mq-mini svg { display: block; width: 100%; height: auto; }
     /* Vista 3D */
-    .mq-3d { position: relative; }
-    .mq3d-overlay { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; justify-content: space-between; padding: 10px; pointer-events: none; z-index: 2; }
-    .mq3d-overlay .mq-etiqueta, .mq3d-overlay .mq-pres, .mq3d-overlay .mq-cuenta { position: static; pointer-events: auto; }
-    .mq-3d .mq-cuenta { position: absolute; left: 10px; bottom: 10px; z-index: 2; }
-    .mq-3d .mq-fichas { margin-top: 12px; }
+    .v3d { position: relative; }
+    .v3d-lienzo { position: relative; aspect-ratio: 1 / 1.08; border-radius: 14px; overflow: hidden; cursor: grab; touch-action: pan-y;
+      background: radial-gradient(120% 90% at 50% 32%, #FCFAF6 0%, #F1ECE4 62%, #E5DED3 100%); }
+    .v3d-lienzo:active { cursor: grabbing; }
+    .v3d-lienzo canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+    .v3d-tag, .v3d-pres, .v3d-cuenta {
+      position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 6px; pointer-events: none;
+      padding: 4px 10px; border-radius: 999px; font-size: .72rem; font-weight: 600; line-height: 1.3;
+      background: rgba(255,255,255,.92); color: #333; box-shadow: 0 1px 4px rgba(0,0,0,.14);
+    }
+    .v3d-tag { top: 10px; left: 10px; }
+    .v3d-pres { top: 10px; right: 10px; }
+    .v3d-pres[hidden], .v3d-vacio[hidden] { display: none; }
+    .v3d-pres i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+    .v3d-cuenta { left: 10px; bottom: 10px; }
+    .v3d-vacio { position: absolute; left: 0; right: 0; bottom: 14%; z-index: 2; text-align: center; font-size: .84rem; color: #555; pointer-events: none; }
+    @media (max-width: 380px) { .v3d-tag { font-size: .66rem; } .v3d-pres { top: 40px; left: 10px; right: auto; } }
     /* Cada flor nueva aparece creciendo */
     .cr-flor { transform-box: fill-box; transform-origin: center; }
     .cr-nace { animation: mqNace .42s cubic-bezier(.2,.9,.3,1.35) both; animation-delay: calc(var(--i, 0) * 18ms); }
@@ -1438,12 +1621,6 @@ function miniReal(cfg) {
 
 function pintarCreador() {
   if (!$("#crTipos")) return;
-  /* Carga Three.js en segundo plano la primera vez */
-  if (!_3dReady && !_3dFailed && !_3dLoading) {
-    cargarThree().then(() => {
-      if ($("#crPreview")) { _bouquet = null; $("#crPreview").innerHTML = ""; $("#crPreview").innerHTML = vistaReal(cr); }
-    }).catch(() => {});
-  }
   const t = crBuscar("tipos", cr.tipo), n = totalFlores(cr);
   // 1. Tipo
   $("#crTipos").innerHTML = CREADOR.tipos.map(x => `
@@ -1495,14 +1672,7 @@ function pintarCreador() {
 }
 function pintarResumenCreador() {
   const t = crBuscar("tipos", cr.tipo), n = totalFlores(cr), total = precioCreacion(cr), ext = costoExtras(cr.extras);
-  if (_bouquet) {
-    actualizar3D(cr);
-    const ov = $("#crPreview").querySelector(".mq-3d, .mq");
-    if (ov) ov.outerHTML = `<div class="mq mq-3d">${etiquetas3D(cr)}</div>`;
-    else $("#crPreview").insertAdjacentHTML("beforeend", `<div class="mq mq-3d">${etiquetas3D(cr)}</div>`);
-  } else {
-    $("#crPreview").innerHTML = vistaReal(cr);
-  }
+  if (!VISOR3D.pintar(cr)) $("#crPreview").innerHTML = vistaReal(cr);
   $("#crTitulo").textContent = t.carrito;
   const filas = [[`Base (${t.nombre.toLowerCase()})`, t.precioBase], [`Flores (${n})`, costoFlores(cr)]];
   if (ext) filas.push(["Extras", ext]);

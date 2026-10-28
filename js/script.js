@@ -170,6 +170,16 @@ const PRODUCTOS = [
    a ofrecerlo. Los pedidos ya hechos no se modifican. */
 const EXTRAS_OCULTOS = ["mariposa"];
 
+/* Fotos de los extras. Lo que escribas aquí manda sobre la foto
+   que venga de Supabase, así que basta con guardar la imagen en
+   img/extras/ y nombrarla abajo. Quita la línea para volver al ícono. */
+const EXTRAS_FOTOS = {
+  tarjeta:    "img/extras/tarjeta.jpg",
+  chocolates: "img/extras/chocolates.jpg",
+  peluche:    "img/extras/peluche.jpg",
+};
+const conFotos = lista => lista.map(e => ({ ...e, imagen: EXTRAS_FOTOS[e.id] || e.imagen }));
+
 const EXTRAS = [
   { id:"flor",       nombre:"Flor adicional",        detalle:"Del mismo estilo del producto",      precio:1.5, max:20, imagen:"img/extras/flor.jpg" },
   { id:"luces",      nombre:"Luces LED cálidas",     detalle:"Tira de luces que brillan de noche", precio:2,   max:3, imagen:"img/extras/luces.jpg" },
@@ -180,7 +190,7 @@ const EXTRAS = [
   { id:"bolsa",      nombre:"Bolsa de regalo",       detalle:"Bolsa blanca con ventana",           precio:2,   max:2, imagen:"img/extras/bolsa.jpg" },
   // exclusivo:true → solo aparece en los productos que lo incluyan en su lista extras:[...]
   { id:"hotwheels",  nombre:"Carrito Hot Wheels",    detalle:"Carrito de colección en su empaque", precio:4,   max:5, exclusivo:true, imagen:"img/extras/hotwheels.jpg" },
-];
+].map(e => ({ ...e, imagen: EXTRAS_FOTOS[e.id] || e.imagen }));
 
 /* =========================================================
    CREA TU RAMO — opciones del creador personalizado.
@@ -1207,7 +1217,7 @@ function catalogoDesdeSupabase(filasP, filasE) {
 function aplicarCatalogo(c) {
   if (!c || !c.productos?.length) return;
   PRODUCTOS.splice(0, PRODUCTOS.length, ...c.productos);
-  EXTRAS.splice(0, EXTRAS.length, ...c.extras.filter(e => !EXTRAS_OCULTOS.includes(e.id)));
+  EXTRAS.splice(0, EXTRAS.length, ...conFotos(c.extras.filter(e => !EXTRAS_OCULTOS.includes(e.id))));
   pintarFiltros(); pintarProductos(); pintarCarrito();
   if (typeof pintarCreador === "function" && $("#crTipos")) conFoco(pintarCreador);
   if (actual && $("#modal").classList.contains("visible")) {

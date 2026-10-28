@@ -122,7 +122,7 @@ const PRODUCTOS = [
     imagenes:["img/girasol-bolsa-regalo.jpg","img/girasol-maceta-1.jpg"],
     descripcion:"Nuestro girasol en maceta, entregado en bolsa blanca con ventana y asas de cinta. Listo para regalar.",
     etiqueta:"Listo para regalar",
-    extras:["flor","mariposa","lazo","tarjeta","chocolates","peluche"], // ya incluye bolsa
+    extras:["flor","lazo","tarjeta","chocolates","peluche"], // ya incluye bolsa
     opciones:[{nombre:"Con bolsa de ventana",precio:10}] },
 
   { id:4, nombre:"Rama de flores amarillas", categoria:"Flores sueltas",
@@ -140,7 +140,7 @@ const PRODUCTOS = [
     imagenes:["img/caja-lirios-azules-1.jpg","img/caja-lirios-azules-2.jpg","img/caja-lirios-azules-3.jpg","img/caja-lirios-azules-4.jpg"],
     descripcion:"Lirios azules y blanco tejidos a mano, en caja negra con asa de cinta y luces LED que los iluminan de noche.",
     etiqueta:"Nuevo",
-    extras:["hotwheels","flor","mariposa","lazo","tarjeta","chocolates","peluche"], // ya incluye caja y luces
+    extras:["hotwheels","flor","lazo","tarjeta","chocolates","peluche"], // ya incluye caja y luces
     opciones:[{nombre:"3 lirios",precio:25},{nombre:"5 lirios",precio:38}] },
 
   { id:6, nombre:"Combo ramo y girasol", categoria:"Combos",
@@ -164,10 +164,15 @@ const PRODUCTOS = [
    tiene, muestra todos.
    ⚠️ Los precios son de ejemplo: cámbialos por los tuyos.
    ========================================================= */
+/* Extras que no se ofrecen, aunque todavía existan en Supabase.
+   Escribe aquí el id del extra para esconderlo en toda la página
+   (catálogo y creador de ramos). Quítalo de la lista para volver
+   a ofrecerlo. Los pedidos ya hechos no se modifican. */
+const EXTRAS_OCULTOS = ["mariposa"];
+
 const EXTRAS = [
   { id:"flor",       nombre:"Flor adicional",        detalle:"Del mismo estilo del producto",      precio:1.5, max:20, imagen:"img/extras/flor.jpg" },
   { id:"luces",      nombre:"Luces LED cálidas",     detalle:"Tira de luces que brillan de noche", precio:2,   max:3, imagen:"img/extras/luces.jpg" },
-  { id:"mariposa",   nombre:"Mariposa decorativa",   detalle:"Se coloca entre las flores",         precio:1,   max:5 },
   { id:"lazo",       nombre:"Lazo de otro color",    detalle:"Dinos el color por WhatsApp",        precio:1,   max:1, imagen:"img/extras/lazo.jpg" },
   { id:"tarjeta",    nombre:"Tarjeta decorada",      detalle:"Con tu mensaje escrito a mano",      precio:1.5, max:1 },
   { id:"chocolates", nombre:"Chocolates",            detalle:"Cajita de bombones",                 precio:4,   max:3 },
@@ -283,7 +288,7 @@ const CREADOR = {
     { id:"negro",      nombre:"Negra",      hex:"#2B2B2B" },
     { id:"terracota",  nombre:"Terracota",  hex:"#C0643C" },
   ],
-  extras: ["luces","mariposa","tarjeta","chocolates","peluche","bolsa"],
+  extras: ["luces","tarjeta","chocolates","peluche","bolsa"],
 };
 
 /* =========================================================
@@ -1202,7 +1207,7 @@ function catalogoDesdeSupabase(filasP, filasE) {
 function aplicarCatalogo(c) {
   if (!c || !c.productos?.length) return;
   PRODUCTOS.splice(0, PRODUCTOS.length, ...c.productos);
-  EXTRAS.splice(0, EXTRAS.length, ...c.extras);
+  EXTRAS.splice(0, EXTRAS.length, ...c.extras.filter(e => !EXTRAS_OCULTOS.includes(e.id)));
   pintarFiltros(); pintarProductos(); pintarCarrito();
   if (typeof pintarCreador === "function" && $("#crTipos")) conFoco(pintarCreador);
   if (actual && $("#modal").classList.contains("visible")) {

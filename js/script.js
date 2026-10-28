@@ -988,7 +988,387 @@ function muestraFlor(florId, colorId) {
 /* ---------- Vista previa del creador ----------
    Muestra la maqueta de lo que lleva armado el cliente y, debajo,
    una ficha por cada flor con su foto, su color y su cantidad. */
+
+/* ========================================================================
+   MAQUETA 3D — Vista previa realista con Three.js
+   Se carga solo la primera vez que el cliente abre el creador.
+   Si el navegador no soporta WebGL, se usa la maqueta SVG de respaldo.
+   ======================================================================== */
+const THREE_CDN = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+let _3dReady = false, _3dFailed = false, _3dLoading = false;
+let _bouquet = null;
+
+function cargarThree() {
+  if (_3dReady || _3dLoading) return Promise.resolve();
+  _3dLoading = true;
+  return new Promise((res, rej) => {
+    if (window.THREE) { _3dReady = true; _3dLoading = false; return res(); }
+    const s = document.createElement("script");
+    s.src = THREE_CDN;
+    s.onload = () => { _3dReady = true; _3dLoading = false; res(); };
+    s.onerror = () => { _3dFailed = true; _3dLoading = false; rej(); };
+    document.head.appendChild(s);
+  });
+}
+
+/* Clase que maneja la escena 3D dentro del contenedor del preview */
+class Bouquet3D {
+  constructor(container) {
+    this.el = container;
+    this.texCache = {};
+    this.disposed = false;
+    this.rotY = 0;
+    this.dragging = false;
+    this.lastX = 0;
+    this.targetRot = 0;
+    this.init();
+  }
+
+  init() {
+    const T = window.THREE;
+    const W = this.el.clientWidth || 320;
+    const H = W;
+
+    this.scene = new T.Scene();
+
+    this.camera = new T.PerspectiveCamera(32, 1, 0.1, 100);
+    this.camera.position.set(0, 2.8, 9.5);
+    this.camera.lookAt(0, 1.2, 0);
+
+    this.renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer.setSize(W, H);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.sortObjects = true;
+    const cv = this.renderer.domElement;
+    cv.style.display = "block";
+    cv.style.width = "100%";
+    cv.style.height = "auto";
+    cv.style.borderRadius = "14px";
+    cv.style.touchAction = "pan-y";
+    this.el.appendChild(cv);
+
+    // Luces
+    this.scene.add(new T.AmbientLight(0xffffff, 0.72));
+    const dir = new T.DirectionalLight(0xffffff, 0.65);
+    dir.position.set(4, 6, 5);
+    this.scene.add(dir);
+    const rim = new T.DirectionalLight(0xeee8dd, 0.3);
+    rim.position.set(-3, 2, -4);
+    this.scene.add(rim);
+
+    // Grupo del ramo
+    this.group = new T.Group();
+    this.scene.add(this.group);
+
+    this.setupDrag(cv);
+    this.tick();
+  }
+
+  setupDrag(cv) {
+    let startRot = 0;
+    cv.addEventListener("pointerdown", e => {
+      if (e.pointerType === "touch" && e.isPrimary === false) return;
+      this.dragging = true; this.lastX = e.clientX; startRot = this.rotY;
+      cv.setPointerCapture(e.pointerId);
+    });
+    cv.addEventListener("pointermove", e => {
+      if (!this.dragging) return;
+      this.rotY = startRot + (e.clientX - this.lastX) * 0.012;
+    });
+    cv.addEventListener("pointerup", () => { this.dragging = false; });
+    cv.addEventListener("pointercancel", () => { this.dragging = false; });
+  }
+
+  tick() {
+    if (this.disposed) return;
+    requestAnimationFrame(() => this.tick());
+    if (!this.dragging) this.rotY += 0.004;
+    this.group.rotation.y += (this.rotY - this.group.rotation.y) * 0.12;
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  resize() {
+    const W = this.el.clientWidth || 320;
+    this.renderer.setSize(W, W);
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
+  }
+
+  /* --- Materiales y texturas --- */
+  matColor(hex) {
+    return new THREE.MeshLambertMaterial({ color: new THREE.Color(hex) });
+  }
+
+  loadTex(url) {
+    if (this.texCache[url]) return this.texCache[url];
+    const tex = new THREE.TextureLoader().load(url);
+    tex.encoding = THREE.sRGBEncoding || 3001;
+    this.texCache[url] = tex;
+    return tex;
+  }
+
+  /* --- Construir la escena --- */
+  update(cfg) {
+    const T = window.THREE;
+    // Limpiar
+    while (this.group.children.length) {
+      const c = this.group.children[0];
+      this.group.remove(c);
+      c.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+    }
+
+    const fl = listaFlores(cfg, 60);
+    const n = fl.length;
+
+    if (cfg.tipo === "ramo") this.buildRamo(cfg, fl, n);
+    else if (cfg.tipo === "maceta") this.buildMaceta(cfg, fl, n);
+    else this.buildSuelta(cfg, fl, n);
+  }
+
+  /* Posiciones en domo (espiral de Fibonacci) */
+  domePositions(n, rx, ry, rz, cy) {
+    if (n === 0) return [];
+    if (n === 1) return [[0, cy + ry * 0.3, 0]];
+    const PHI = Math.PI * (3 - Math.sqrt(5));
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      const d = Math.sqrt(t);
+      const a = i * PHI;
+      pts.push([rx * d * Math.cos(a), cy + ry * (1 - t * 0.7), rz * d * Math.sin(a)]);
+    }
+    return pts.sort((a, b) => a[2] - b[2]);
+  }
+
+  addFlowerSprite(f, x, y, z, scale) {
+    const T = window.THREE;
+    const foto = fotoFlor(f.f, f.c);
+    let mat;
+    if (foto) {
+      const tex = this.loadTex(foto);
+      mat = new T.SpriteMaterial({ map: tex, depthWrite: false });
+    } else {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64; canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = f.hex; ctx.beginPath(); ctx.arc(32, 32, 30, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.2)"; ctx.lineWidth = 2; ctx.stroke();
+      const tex = new T.CanvasTexture(canvas);
+      mat = new T.SpriteMaterial({ map: tex });
+    }
+    const sprite = new T.Sprite(mat);
+    sprite.position.set(x, y, z);
+    sprite.scale.set(scale, scale, 1);
+    this.group.add(sprite);
+    return sprite;
+  }
+
+  addStem(x1, y1, z1, x2, y2, z2) {
+    const T = window.THREE;
+    const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const geo = new T.CylinderGeometry(0.035, 0.04, len, 6);
+    const mat = new T.MeshLambertMaterial({ color: 0x4E8B3A });
+    const mesh = new T.Mesh(geo, mat);
+    mesh.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
+    mesh.lookAt(x2, y2, z2);
+    mesh.rotateX(Math.PI / 2);
+    this.group.add(mesh);
+  }
+
+  addLeaf(x, y, z, rot) {
+    const T = window.THREE;
+    const shape = new T.Shape();
+    shape.moveTo(0, 0); shape.quadraticCurveTo(0.15, 0.4, 0, 0.7);
+    shape.quadraticCurveTo(-0.15, 0.4, 0, 0);
+    const geo = new T.ShapeGeometry(shape);
+    const mat = new T.MeshLambertMaterial({ color: 0x4E8B3A, side: T.DoubleSide });
+    const mesh = new T.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    mesh.rotation.set(0, rot, (Math.random() - 0.5) * 0.4 - 0.2);
+    mesh.scale.set(0.7, 0.7, 0.7);
+    this.group.add(mesh);
+  }
+
+  buildRamo(cfg, fl, n) {
+    const T = window.THREE;
+    const papelHex = crBuscar("papeles", cfg.papel)?.hex || "#F4F1EA";
+    const lazoHex = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
+
+    // Cono del papel (apunta hacia abajo)
+    const coneGeo = new T.CylinderGeometry(0.1, 2.4, 4.8, 32, 1, true);
+    const coneMat = new T.MeshLambertMaterial({ color: papelHex, side: T.DoubleSide });
+    const cone = new T.Mesh(coneGeo, coneMat);
+    cone.position.y = -1.0;
+    this.group.add(cone);
+
+    // Borde superior del cono
+    const rimGeo = new T.TorusGeometry(2.4, 0.06, 8, 32);
+    const rimMat = new T.MeshLambertMaterial({ color: papelHex });
+    const rim = new T.Mesh(rimGeo, rimMat);
+    rim.position.y = 1.4;
+    rim.rotation.x = Math.PI / 2;
+    this.group.add(rim);
+
+    // Lazo
+    const bowMat = new T.MeshLambertMaterial({ color: lazoHex });
+    const bowL = new T.Mesh(new T.SphereGeometry(0.28, 12, 12), bowMat);
+    bowL.position.set(-0.35, 0.1, 0);
+    bowL.scale.set(1.2, 0.8, 0.6);
+    this.group.add(bowL);
+    const bowR = new T.Mesh(new T.SphereGeometry(0.28, 12, 12), bowMat);
+    bowR.position.set(0.35, 0.1, 0);
+    bowR.scale.set(1.2, 0.8, 0.6);
+    this.group.add(bowR);
+    const bowC = new T.Mesh(new T.SphereGeometry(0.14, 8, 8), bowMat);
+    bowC.position.set(0, 0.1, 0);
+    this.group.add(bowC);
+    // Cintas del lazo
+    const ribGeo = new T.CylinderGeometry(0.04, 0.03, 1.2, 6);
+    for (const sx of [-1, 1]) {
+      const rib = new T.Mesh(ribGeo, bowMat);
+      rib.position.set(sx * 0.12, -0.5, 0);
+      rib.rotation.z = sx * 0.25;
+      this.group.add(rib);
+    }
+
+    if (!n) return;
+
+    // Flores
+    const flowerSize = Math.max(0.55, Math.min(1.6, 4.2 / Math.sqrt(n + 0.8)));
+    const spread = Math.min(2.0, 0.5 + n * 0.12);
+    const pts = this.domePositions(n, spread, 1.5, spread, 1.8);
+
+    // Hojas entre las flores
+    for (let i = 0; i < Math.min(n, 8); i++) {
+      const a = i * Math.PI * 2 / Math.min(n, 8);
+      this.addLeaf(Math.cos(a) * (spread + 0.3), 1.6 + Math.random() * 0.5, Math.sin(a) * (spread + 0.3), a + Math.PI);
+    }
+
+    // Tallos y flores
+    pts.forEach((p, i) => {
+      const f = fl[i];
+      if (!f) return;
+      this.addStem(p[0] * 0.2, 0.3, p[2] * 0.2, p[0], p[1] - flowerSize * 0.4, p[2]);
+      this.addFlowerSprite(f, p[0], p[1], p[2], flowerSize);
+    });
+  }
+
+  buildMaceta(cfg, fl, n) {
+    const T = window.THREE;
+    const macHex = crBuscar("macetas", cfg.maceta)?.hex || "#6B4A32";
+
+    // Maceta
+    const potGeo = new T.CylinderGeometry(1.2, 0.8, 1.8, 32);
+    const potMat = new T.MeshLambertMaterial({ color: macHex });
+    const pot = new T.Mesh(potGeo, potMat);
+    pot.position.y = -1.5;
+    this.group.add(pot);
+    // Borde de la maceta
+    const brimGeo = new T.CylinderGeometry(1.35, 1.2, 0.3, 32);
+    const brim = new T.Mesh(brimGeo, potMat);
+    brim.position.y = -0.45;
+    this.group.add(brim);
+
+    if (!n) return;
+
+    const flowerSize = Math.max(0.7, Math.min(1.5, 3.8 / Math.sqrt(n + 0.5)));
+    const spread = Math.min(1.3, 0.3 + n * 0.18);
+    const pts = this.domePositions(n, spread, 1.2, spread, 0.6);
+
+    for (let i = 0; i < Math.min(n, 5); i++) {
+      const a = i * Math.PI * 2 / Math.min(n, 5);
+      this.addLeaf(Math.cos(a) * (spread + 0.2), 0.4, Math.sin(a) * (spread + 0.2), a + Math.PI);
+    }
+
+    pts.forEach((p, i) => {
+      const f = fl[i]; if (!f) return;
+      this.addStem(p[0] * 0.15, -0.3, p[2] * 0.15, p[0], p[1] - flowerSize * 0.35, p[2]);
+      this.addFlowerSprite(f, p[0], p[1], p[2], flowerSize);
+    });
+  }
+
+  buildSuelta(cfg, fl, n) {
+    const T = window.THREE;
+    const lazoHex = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
+
+    // Tallo principal
+    const stemGeo = new T.CylinderGeometry(0.06, 0.06, 5, 8);
+    const stemMat = new T.MeshLambertMaterial({ color: 0x4E8B3A });
+    const stem = new T.Mesh(stemGeo, stemMat);
+    stem.position.y = -0.5;
+    this.group.add(stem);
+
+    // Hojas
+    this.addLeaf(-0.4, -0.8, 0, -0.4);
+    this.addLeaf(0.4, 0.0, 0, 0.4);
+
+    // Lazo pequeño
+    const bowMat = new T.MeshLambertMaterial({ color: lazoHex });
+    for (const sx of [-1, 1]) {
+      const b = new T.Mesh(new T.SphereGeometry(0.16, 8, 8), bowMat);
+      b.position.set(sx * 0.22, -1.4, 0);
+      b.scale.set(1.2, 0.7, 0.5);
+      this.group.add(b);
+    }
+
+    if (!n) return;
+    const f = fl[0];
+    this.addFlowerSprite(f, 0, 2.3, 0, 2.0);
+  }
+}
+
+/* Inicializa o actualiza el visor 3D. Devuelve true si está activo, false si hay que usar SVG. */
+function actualizar3D(cfg) {
+  const container = $("#crPreview");
+  if (!container || !_3dReady || _3dFailed) return false;
+  try {
+    if (!_bouquet) {
+      container.innerHTML = "";
+      _bouquet = new Bouquet3D(container);
+    }
+    _bouquet.update(cfg);
+    return true;
+  } catch (e) {
+    console.warn("3D no disponible:", e);
+    _3dFailed = true;
+    if (_bouquet) { _bouquet.dispose(); _bouquet = null; }
+    return false;
+  }
+}
+
+/* Etiquetas flotantes sobre el canvas 3D */
+function etiquetas3D(cfg) {
+  const t = crBuscar("tipos", cfg.tipo), n = totalFlores(cfg);
+  const flores = Object.entries(cfg.flores || {});
+  const max = 8, extra = flores.length - max;
+  const fichas = flores.slice(0, max).map(([k, q]) => {
+    const [f, c] = k.split("|"), co = crBuscar("colores", c), foto = fotoFlor(f, c);
+    const cara = foto ? `<img src="${foto}" alt="" loading="lazy">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
+    return `<span class="mq-ficha" title="${q} ${nombreFlor(f, c, q).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${q}</b></span>`;
+  }).join("") + (extra > 0 ? `<span class="mq-ficha mq-mas">+${extra}</span>` : "");
+  let pres = "";
+  if (cfg.tipo === "ramo") { const pa = crBuscar("papeles", cfg.papel); if (pa) pres = `<i style="background:${pa.hex}"></i>Papel ${pa.nombre.toLowerCase()}`; }
+  if (cfg.tipo === "maceta") { const ma = crBuscar("macetas", cfg.maceta); if (ma) pres = `<i style="background:${ma.hex}"></i>Maceta ${ma.nombre.toLowerCase()}`; }
+  return `<div class="mq3d-overlay">
+    <span class="mq-etiqueta">Vista 3D · Arrastra para girar</span>
+    ${pres ? `<span class="mq-pres">${pres}</span>` : ""}
+    <span class="mq-cuenta">${n} ${n === 1 ? "flor" : "flores"}</span>
+  </div><div class="mq-fichas">${fichas || `<span class="mq-vacio">Elige una flor y un color, y toca "Agregar".</span>`}</div>`;
+}
+
+
 function vistaReal(cfg) {
+  /* Si Three.js ya cargó, actualiza el canvas 3D y devuelve las etiquetas */
+  if (_3dReady && !_3dFailed && typeof Bouquet3D !== "undefined" && actualizar3D(cfg)) {
+    return `<div class="mq mq-3d">${etiquetas3D(cfg)}</div>`;
+  }
+  /* Respaldo: maqueta SVG plana */
   const t = crBuscar("tipos", cfg.tipo), n = totalFlores(cfg);
   const flores = Object.entries(cfg.flores || {});
   const max = 8, extra = flores.length - max;
@@ -1005,7 +1385,7 @@ function vistaReal(cfg) {
     <span class="mq-etiqueta">Así va quedando</span>
     ${pres ? `<span class="mq-pres">${pres}</span>` : ""}
     <span class="mq-cuenta">${n} ${n === 1 ? "flor" : "flores"}</span>
-    <div class="mq-fichas">${fichas || `<span class="mq-vacio">Elige una flor y un color, y toca “Agregar”.</span>`}</div>
+    <div class="mq-fichas">${fichas || `<span class="mq-vacio">Elige una flor y un color, y toca \u201CAgregar\u201D.</span>`}</div>
   </div>`;
 }
 /* Miniatura (carrito y barra del celular) */
@@ -1041,6 +1421,12 @@ function miniReal(cfg) {
     .mq-vacio { font-size: .82rem; opacity: .7; }
     .mq-mini { display: block; width: 100%; }
     .mq-mini svg { display: block; width: 100%; height: auto; }
+    /* Vista 3D */
+    .mq-3d { position: relative; }
+    .mq3d-overlay { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; justify-content: space-between; padding: 10px; pointer-events: none; z-index: 2; }
+    .mq3d-overlay .mq-etiqueta, .mq3d-overlay .mq-pres, .mq3d-overlay .mq-cuenta { position: static; pointer-events: auto; }
+    .mq-3d .mq-cuenta { position: absolute; left: 10px; bottom: 10px; z-index: 2; }
+    .mq-3d .mq-fichas { margin-top: 12px; }
     /* Cada flor nueva aparece creciendo */
     .cr-flor { transform-box: fill-box; transform-origin: center; }
     .cr-nace { animation: mqNace .42s cubic-bezier(.2,.9,.3,1.35) both; animation-delay: calc(var(--i, 0) * 18ms); }
@@ -1052,6 +1438,12 @@ function miniReal(cfg) {
 
 function pintarCreador() {
   if (!$("#crTipos")) return;
+  /* Carga Three.js en segundo plano la primera vez */
+  if (!_3dReady && !_3dFailed && !_3dLoading) {
+    cargarThree().then(() => {
+      if ($("#crPreview")) { _bouquet = null; $("#crPreview").innerHTML = ""; $("#crPreview").innerHTML = vistaReal(cr); }
+    }).catch(() => {});
+  }
   const t = crBuscar("tipos", cr.tipo), n = totalFlores(cr);
   // 1. Tipo
   $("#crTipos").innerHTML = CREADOR.tipos.map(x => `
@@ -1103,7 +1495,14 @@ function pintarCreador() {
 }
 function pintarResumenCreador() {
   const t = crBuscar("tipos", cr.tipo), n = totalFlores(cr), total = precioCreacion(cr), ext = costoExtras(cr.extras);
-  $("#crPreview").innerHTML = vistaReal(cr);
+  if (_bouquet) {
+    actualizar3D(cr);
+    const ov = $("#crPreview").querySelector(".mq-3d, .mq");
+    if (ov) ov.outerHTML = `<div class="mq mq-3d">${etiquetas3D(cr)}</div>`;
+    else $("#crPreview").insertAdjacentHTML("beforeend", `<div class="mq mq-3d">${etiquetas3D(cr)}</div>`);
+  } else {
+    $("#crPreview").innerHTML = vistaReal(cr);
+  }
   $("#crTitulo").textContent = t.carrito;
   const filas = [[`Base (${t.nombre.toLowerCase()})`, t.precioBase], [`Flores (${n})`, costoFlores(cr)]];
   if (ext) filas.push(["Extras", ext]);

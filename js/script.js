@@ -845,41 +845,124 @@ function svgFlor(tipo, hex, x, y, r) {
   }
   return "";
 }
-/* Reparte los colores para que se vean mezclados */
-function floresMezcladas(cfg, max) {
-  const grupos = Object.entries(cfg.flores || {}).map(([k, n]) => { const [f, c] = k.split("|"); return { f, hex: crBuscar("colores", c)?.hex || "#ccc", n }; });
+/* ---------- Maqueta del ramo (SVG) ----------
+   Dibuja exactamente lo que eligió el cliente: una flor por cada
+   unidad, con su forma y su color, el papel, el lazo o la maceta.
+   No hay azar: con las mismas opciones sale siempre el mismo dibujo. */
+
+/* Lista de flores una por una, intercaladas para que se vean mezcladas.
+   Devuelve tantas flores como pidió el cliente, ni una más ni una menos. */
+function listaFlores(cfg, tope = Infinity) {
+  const grupos = Object.entries(cfg.flores || {})
+    .map(([k, n]) => { const [f, c] = k.split("|"); return { f, c, hex: crBuscar("colores", c)?.hex || "#CCC", n }; });
   const out = [];
-  while (out.length < max && grupos.some(g => g.n > 0)) grupos.forEach(g => { if (g.n > 0 && out.length < max) { out.push(g); g.n--; } });
+  let quedan = grupos.reduce((a, g) => a + g.n, 0);
+  while (out.length < Math.min(quedan + out.length, tope) && grupos.some(g => g.n > 0)) {
+    for (const g of grupos) {
+      if (g.n > 0 && out.length < tope) { out.push({ f: g.f, c: g.c, hex: g.hex, k: `${g.f}|${g.c}|${out.length}` }); g.n--; }
+    }
+  }
   return out;
 }
-function svgCreacion(cfg) {
-  const verde = "#4E8B3A", verdeOsc = "#3A6B2B";
+
+/* Reparte n flores dentro de un óvalo, en espiral, de atrás hacia adelante */
+function posiciones(n, cx, cy, rx, ry) {
+  if (n === 1) return [[cx, cy]];
+  const AUREO = Math.PI * (3 - Math.sqrt(5));
+  return Array.from({ length: n }, (_, i) => {
+    const d = Math.sqrt((i + 0.5) / n), a = i * AUREO;
+    return [cx + rx * d * Math.cos(a), cy + ry * d * Math.sin(a)];
+  }).sort((p, q) => p[1] - q[1]);          // los de abajo se dibujan al final: quedan al frente
+}
+
+/* Tamaño de cada flor según cuántas haya: muchas flores, flores más pequeñas */
+const radioFlor = n => Math.max(9, Math.min(28, 74 / Math.sqrt(n + 1.2)));
+
+const VERDE = "#4E8B3A", VERDE_OSC = "#3A6B2B";
+let floresDibujadas = new Set();           // para animar solo las flores nuevas
+
+function svgCreacion(cfg, animar = false) {
+  const t = crBuscar("tipos", cfg.tipo);
+  // Se dibuja TODO lo que lleva el cliente, aunque pase del máximo:
+  // así ve de inmediato que le sobran flores. El tope solo evita
+  // dibujos imposibles si algún día se sube mucho el límite.
+  const fl = listaFlores(cfg, 60);
+  const n = fl.length;
+  const nuevas = new Set(fl.map(x => x.k));
+  const esNueva = k => animar && !floresDibujadas.has(k);
   let s = "";
+
+  const ramillete = (cx, cy, rx, ry, nudo, r) => {
+    const P = posiciones(n, cx, cy, rx, ry);
+    const tallos = P.map(([x, y]) =>
+      `<path d="M${x.toFixed(1)} ${y.toFixed(1)}C${x.toFixed(1)} ${(y + (nudo[1] - y) * .55).toFixed(1)} ${nudo[0]} ${(y + (nudo[1] - y) * .5).toFixed(1)} ${nudo[0]} ${nudo[1]}" fill="none" stroke="${VERDE}" stroke-width="${Math.max(2, r * .16).toFixed(1)}" stroke-linecap="round"/>`).join("");
+    const cabezas = P.map(([x, y], i) => {
+      const g = fl[i];
+      return `<g class="cr-flor${esNueva(g.k) ? " cr-nace" : ""}" style="--i:${i}">${svgFlor(g.f, g.hex, +x.toFixed(1), +y.toFixed(1), r)}</g>`;
+    }).join("");
+    return { tallos, cabezas };
+  };
+
   if (cfg.tipo === "ramo") {
-    const papel = crBuscar("papeles", cfg.papel)?.hex || "#F4F1EA", lazo = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
-    const P = [[120,96],[94,86],[146,86],[108,64],[132,64],[76,106],[164,106],[120,52],[66,80],[174,80],[96,112],[144,112],[120,122],[84,56],[156,56],[54,102],[186,102],[104,34],[136,34]];
-    const fl = floresMezcladas(cfg, P.length), n = fl.length, r = n <= 3 ? 27 : n <= 8 ? 22 : 18;
-    s += `<path d="M58 112L120 226L182 112Z" fill="${papel}" stroke="rgba(0,0,0,.12)"/>`;
-    s += [[70,70],[170,70],[60,110],[180,110],[120,40]].map(([a, b], i) => `<ellipse cx="${a}" cy="${b}" rx="10" ry="26" fill="${i % 2 ? verde : verdeOsc}" transform="rotate(${(a - 120) / 2} ${a} ${b})"/>`).join("");
-    s += fl.map((g, i) => ({ g, p: P[i] })).reverse().map(({ g, p }) => svgFlor(g.f, g.hex, p[0], p[1], r)).join("");
-    s += `<path d="M40 104L120 140L200 104L182 112L120 226L58 112Z" fill="${papel}" stroke="rgba(0,0,0,.15)"/><path d="M58 112L120 226" stroke="rgba(0,0,0,.1)"/><path d="M182 112L120 226" stroke="rgba(0,0,0,.1)"/>`;
-    s += `<path d="M120 176l-26-12v24zM120 176l26-12v24z" fill="${lazo}" stroke="rgba(0,0,0,.18)"/><path d="M120 176l-10 30M120 176l10 30" stroke="${lazo}" stroke-width="6" stroke-linecap="round"/><circle cx="120" cy="176" r="6" fill="${lazo}" stroke="rgba(0,0,0,.2)"/>`;
+    const papel = crBuscar("papeles", cfg.papel)?.hex || "#F4F1EA";
+    const lazo = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
+    const r = radioFlor(n);
+    // El ramillete crece con la cantidad, pero siempre queda sobre el papel
+    const arriba = 22 + r * .6, abajo = 142 - r * .6, cy = (arriba + abajo) / 2;
+    const ry = Math.min((abajo - arriba) / 2, 10 + n * 4.5);
+    const rx = Math.min(86 - r * .5, 20 + n * 6);
+    const { tallos, cabezas } = ramillete(120, cy, rx, ry, [120, 150], r);
+    // papel de atrás
+    s += `<path d="M34 118Q120 58 206 118L120 150Z" fill="${papel}" stroke="rgba(0,0,0,.14)" stroke-linejoin="round"/>`;
+    // follaje: sale por los lados del ramillete
+    if (n) s += [[-1,-.1],[1,-.1],[-.72,-.78],[.72,-.78],[0,-1.05]]
+      .map(([fx, fy], i) => {
+        const x = +Math.max(20, Math.min(220, 120 + fx * (rx + 9))).toFixed(1);
+        const y = +Math.max(30, cy + fy * (ry + 9)).toFixed(1);
+        return `<ellipse cx="${x}" cy="${y}" rx="8.5" ry="24" fill="${i % 2 ? VERDE : VERDE_OSC}" transform="rotate(${Math.round(fx * 26)} ${x} ${y})"/>`;
+      }).join("");
+    else s += `<ellipse cx="120" cy="86" rx="52" ry="40" fill="none" stroke="#C9C2B6" stroke-dasharray="7 7"/>`;
+    s += tallos + cabezas;
+    // cono de papel al frente
+    s += `<path d="M40 112L120 148L200 112L176 126L120 232L64 126Z" fill="${papel}" stroke="rgba(0,0,0,.16)" stroke-linejoin="round"/>`;
+    s += `<path d="M64 126L120 232L176 126" fill="none" stroke="rgba(0,0,0,.10)"/>`;
+    s += `<path d="M120 150L120 232" stroke="rgba(0,0,0,.07)"/>`;
+    // lazo
+    s += `<path d="M120 178l-28-13v26zM120 178l28-13v26z" fill="${lazo}" stroke="rgba(0,0,0,.2)" stroke-linejoin="round"/>`;
+    s += `<path d="M120 178l-11 32M120 178l11 32" stroke="${lazo}" stroke-width="6" stroke-linecap="round"/>`;
+    s += `<circle cx="120" cy="178" r="6.5" fill="${lazo}" stroke="rgba(0,0,0,.22)"/>`;
   } else if (cfg.tipo === "maceta") {
     const mac = crBuscar("macetas", cfg.maceta)?.hex || "#6B4A32";
-    const P = [[120,70],[86,96],[154,96],[102,46],[138,46]];
-    const fl = floresMezcladas(cfg, P.length);
-    s += fl.map((g, i) => `<path d="M120 165Q${(P[i][0] + 120) / 2} 130 ${P[i][0]} ${P[i][1]}" stroke="${verde}" stroke-width="5" fill="none"/>`).join("");
-    s += `<ellipse cx="96" cy="140" rx="9" ry="20" fill="${verdeOsc}" transform="rotate(-40 96 140)"/><ellipse cx="144" cy="140" rx="9" ry="20" fill="${verde}" transform="rotate(40 144 140)"/>`;
-    s += fl.map((g, i) => ({ g, p: P[i] })).reverse().map(({ g, p }) => svgFlor(g.f, g.hex, p[0], p[1], 24)).join("");
-    s += `<path d="M78 160H162L152 224H88Z" fill="${mac}" stroke="rgba(0,0,0,.18)"/>` + [92,104,116,128,140,152].map(x => `<path d="M${x} 162L${x + (x - 120) * -.08} 222" stroke="rgba(0,0,0,.15)" stroke-width="2"/>`).join("") + `<rect x="74" y="154" width="92" height="12" rx="4" fill="${mac}" stroke="rgba(0,0,0,.2)"/>`;
+    const r = radioFlor(n) * .9;
+    const ry = Math.min(36, 8 + n * 7), rx = Math.min(56, 12 + n * 9);
+    const { tallos, cabezas } = ramillete(120, 96 - ry * .6, rx, ry, [120, 158], r);
+    s += [[90,128,-38],[150,128,38]].map(([x, y, a], i) => `<ellipse cx="${x}" cy="${y}" rx="9" ry="22" fill="${i ? VERDE : VERDE_OSC}" transform="rotate(${a} ${x} ${y})"/>`).join("");
+    if (!n) s += `<ellipse cx="120" cy="86" rx="40" ry="32" fill="none" stroke="#C9C2B6" stroke-dasharray="7 7"/>`;
+    s += tallos + cabezas;
+    s += `<path d="M78 162H162L152 226H88Z" fill="${mac}" stroke="rgba(0,0,0,.2)" stroke-linejoin="round"/>`;
+    s += [92,104,116,128,140,152].map(x => `<path d="M${x} 164L${(x + (x - 120) * -.08).toFixed(1)} 224" stroke="rgba(0,0,0,.12)" stroke-width="2"/>`).join("");
+    s += `<rect x="74" y="154" width="92" height="13" rx="4" fill="${mac}" stroke="rgba(0,0,0,.22)"/>`;
   } else {
-    const lazo = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6", g = floresMezcladas(cfg, 1)[0];
-    s += `<path d="M120 226V90" stroke="${verde}" stroke-width="6"/><ellipse cx="102" cy="168" rx="10" ry="28" fill="${verdeOsc}" transform="rotate(-45 102 168)"/><ellipse cx="138" cy="150" rx="10" ry="28" fill="${verde}" transform="rotate(45 138 150)"/>`;
-    s += `<path d="M120 196l-18-9v18zM120 196l18-9v18z" fill="${lazo}" stroke="rgba(0,0,0,.18)"/><circle cx="120" cy="196" r="5" fill="${lazo}"/>`;
-    s += g ? svgFlor(g.f, g.hex, 120, 76, 40) : `<circle cx="120" cy="76" r="30" fill="none" stroke="#bbb" stroke-dasharray="6 6"/>`;
+    const lazo = crBuscar("lazos", cfg.lazo)?.hex || "#A99BE6";
+    s += `<ellipse cx="101" cy="172" rx="10" ry="28" fill="${VERDE_OSC}" transform="rotate(-45 101 172)"/><ellipse cx="139" cy="152" rx="10" ry="28" fill="${VERDE}" transform="rotate(45 139 152)"/>`;
+    if (n > 1) {                      // si agregó de más, se ven todas las flores
+      const r = radioFlor(n);
+      const ry = Math.min(44, 10 + n * 5), rx = Math.min(70, 18 + n * 7);
+      const { tallos, cabezas } = ramillete(120, 96 - ry * .4, rx, ry, [120, 170], r);
+      s += tallos + cabezas;
+    } else {
+      const g = fl[0];
+      s += `<path d="M120 228V96" stroke="${VERDE}" stroke-width="6" stroke-linecap="round"/>`;
+      s += g
+        ? `<g class="cr-flor${esNueva(g.k) ? " cr-nace" : ""}" style="--i:0">${svgFlor(g.f, g.hex, 120, 76, 42)}</g>`
+        : `<circle cx="120" cy="76" r="30" fill="none" stroke="#C9C2B6" stroke-dasharray="6 6"/>`;
+    }
+    s += `<path d="M120 198l-18-9v18zM120 198l18-9v18z" fill="${lazo}" stroke="rgba(0,0,0,.2)"/><circle cx="120" cy="198" r="5" fill="${lazo}"/>`;
   }
-  return `<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista previa">${s}</svg>`;
+  if (animar) floresDibujadas = nuevas;
+  return `<svg class="cr-maqueta" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Así quedaría tu ${t?.nombre.toLowerCase() || "pedido"}">${s}</svg>`;
 }
+
 const EJEMPLO_CREACION = { tipo:"ramo", papel:"lavanda", lazo:"blanco", flores:{ "girasol|amarillo":3, "rosa|rojo":3, "pequena|blanco":3, "tulipan|rosado":2 }, extras:{} };
 
 /* ---------- Estado e interfaz del creador ---------- */
@@ -902,38 +985,71 @@ function muestraFlor(florId, colorId) {
     ? `<span class="cr-muestra cr-muestra-foto"><img src="${foto}" alt=""><i style="background:${c.hex}"></i></span>`
     : `<span class="cr-muestra"><svg viewBox="0 0 60 60">${svgFlor(florId, c.hex, 30, 30, 26)}</svg></span>`;
 }
-/* Referencia real de la creación: foto del tipo elegido + fotos de las flores
-   elegidas (con su color y cantidad) + papel o maceta. Si el tipo no tiene
-   foto, se usa el dibujo como respaldo. */
+/* ---------- Vista previa del creador ----------
+   Muestra la maqueta de lo que lleva armado el cliente y, debajo,
+   una ficha por cada flor con su foto, su color y su cantidad. */
 function vistaReal(cfg) {
-  const t = crBuscar("tipos", cfg.tipo);
-  if (!t?.imagen) return svgCreacion(cfg);
+  const t = crBuscar("tipos", cfg.tipo), n = totalFlores(cfg);
   const flores = Object.entries(cfg.flores || {});
   const max = 8, extra = flores.length - max;
-  const fichas = flores.slice(0, max).map(([k, n]) => {
-    const [f, c] = k.split("|"), fl = crBuscar("flores", f), co = crBuscar("colores", c);
-    const foto = fotoFlor(f, c);
-    const cara = foto ? `<img src="${foto}" alt="">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
-    return `<span class="cr-real-flor" title="${n} ${nombreFlor(f, c, n).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${n}</b></span>`;
-  }).join("") + (extra > 0 ? `<span class="cr-real-flor cr-real-mas">+${extra}</span>` : "");
+  const fichas = flores.slice(0, max).map(([k, q]) => {
+    const [f, c] = k.split("|"), co = crBuscar("colores", c), foto = fotoFlor(f, c);
+    const cara = foto ? `<img src="${foto}" alt="" loading="lazy">` : `<svg viewBox="0 0 60 60">${svgFlor(f, co.hex, 30, 30, 26)}</svg>`;
+    return `<span class="mq-ficha" title="${q} ${nombreFlor(f, c, q).toLowerCase()}">${cara}<i style="background:${co.hex}"></i><b>${q}</b></span>`;
+  }).join("") + (extra > 0 ? `<span class="mq-ficha mq-mas">+${extra}</span>` : "");
   let pres = "";
-  if (cfg.tipo === "ramo") { const pa = crBuscar("papeles", cfg.papel); if (pa) pres = `<span class="cr-real-pres"><i style="background:${pa.hex}"></i>Papel ${pa.nombre.toLowerCase()}</span>`; }
-  if (cfg.tipo === "maceta") { const ma = crBuscar("macetas", cfg.maceta); if (ma) pres = `<span class="cr-real-pres"><i style="background:${ma.hex}"></i>Maceta ${ma.nombre.toLowerCase()}</span>`; }
-  return `<div class="cr-real">
-    <img class="cr-real-foto" src="${t.imagen}" alt="Referencia: ${t.nombre.toLowerCase()}">
-    <span class="cr-real-etiqueta">Referencia</span>${pres}
-    <div class="cr-real-flores">${fichas || `<span class="cr-real-vacio">Agrega flores para verlas aquí</span>`}</div>
+  if (cfg.tipo === "ramo") { const pa = crBuscar("papeles", cfg.papel); if (pa) pres = `<i style="background:${pa.hex}"></i>Papel ${pa.nombre.toLowerCase()}`; }
+  if (cfg.tipo === "maceta") { const ma = crBuscar("macetas", cfg.maceta); if (ma) pres = `<i style="background:${ma.hex}"></i>Maceta ${ma.nombre.toLowerCase()}`; }
+  return `<div class="mq">
+    <div class="mq-lienzo">${svgCreacion(cfg, true)}</div>
+    <span class="mq-etiqueta">Así va quedando</span>
+    ${pres ? `<span class="mq-pres">${pres}</span>` : ""}
+    <span class="mq-cuenta">${n} ${n === 1 ? "flor" : "flores"}</span>
+    <div class="mq-fichas">${fichas || `<span class="mq-vacio">Elige una flor y un color, y toca “Agregar”.</span>`}</div>
   </div>`;
 }
-/* Miniatura (carrito y barra del celular): foto del tipo + flor principal */
+/* Miniatura (carrito y barra del celular) */
 function miniReal(cfg) {
-  const t = crBuscar("tipos", cfg.tipo);
-  if (!t?.imagen) return svgCreacion(cfg);
-  const primera = Object.keys(cfg.flores || {})[0];
-  let badge = "";
-  if (primera) { const [f, c] = primera.split("|"); badge = `<span class="mini-flor">${muestraFlor(f, c)}</span>`; }
-  return `<span class="mini-real"><img src="${t.imagen}" alt="">${badge}</span>`;
+  return `<span class="mq-mini">${svgCreacion(cfg)}</span>`;
 }
+
+/* Estilos de la maqueta (se agregan solos, no hay que tocar el CSS) */
+(function estilosMaqueta() {
+  if (document.getElementById("estilos-maqueta")) return;
+  const e = document.createElement("style");
+  e.id = "estilos-maqueta";
+  e.textContent = `
+    .mq { position: relative; }
+    .mq-lienzo { border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, rgba(127,127,127,.07), rgba(127,127,127,.13)); }
+    .mq-lienzo svg { display: block; width: 100%; height: auto; }
+    .mq-etiqueta, .mq-pres, .mq-cuenta {
+      position: absolute; display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px; font-size: .72rem; font-weight: 600;
+      background: rgba(255,255,255,.92); color: #333; box-shadow: 0 1px 4px rgba(0,0,0,.14);
+    }
+    .mq-etiqueta { top: 10px; left: 10px; }
+    .mq-pres { top: 10px; right: 10px; }
+    .mq-cuenta { left: 10px; bottom: 10px; }
+    .mq-pres i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+    .mq-fichas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .mq-ficha { position: relative; width: 42px; height: 42px; border-radius: 50%; overflow: visible; }
+    .mq-ficha > img, .mq-ficha > svg { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; display: block; border: 1px solid rgba(127,127,127,.3); }
+    .mq-ficha > i { position: absolute; left: -1px; bottom: -1px; width: 13px; height: 13px; border-radius: 50%; border: 2px solid #fff; }
+    .mq-ficha > b { position: absolute; right: -4px; top: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+      background: #2B2730; color: #fff; font-size: .68rem; line-height: 18px; text-align: center; }
+    .mq-mas { display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(127,127,127,.5); font-size: .78rem; font-weight: 600; }
+    .mq-vacio { font-size: .82rem; opacity: .7; }
+    .mq-mini { display: block; width: 100%; }
+    .mq-mini svg { display: block; width: 100%; height: auto; }
+    /* Cada flor nueva aparece creciendo */
+    .cr-flor { transform-box: fill-box; transform-origin: center; }
+    .cr-nace { animation: mqNace .42s cubic-bezier(.2,.9,.3,1.35) both; animation-delay: calc(var(--i, 0) * 18ms); }
+    @keyframes mqNace { from { opacity: 0; transform: scale(.25); } to { opacity: 1; transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) { .cr-nace { animation: none; } }
+  `;
+  document.head.appendChild(e);
+})();
+
 function pintarCreador() {
   if (!$("#crTipos")) return;
   const t = crBuscar("tipos", cr.tipo), n = totalFlores(cr);

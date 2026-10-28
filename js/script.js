@@ -210,7 +210,16 @@ const CREADOR = {
         azul:     "img/creador/girasol-azul.jpg",
         blanco:   "img/creador/girasol-blanco.jpg",
       } },
-    { id:"pequena",   nombre:"Flor pequeña", plural:"Flores pequeñas", genero:"f", precio:1.5, imagen:"img/creador/flor-pequena.jpg" },
+    { id:"pequena",   nombre:"Flor pequeña", plural:"Flores pequeñas", genero:"f", precio:1.5, imagen:"img/creador/pequena-rosado.jpg",
+      fotosPorColor: {
+        amarillo: "img/creador/pequena-amarillo.jpg",
+        naranja:  "img/creador/pequena-naranja.jpg",
+        rojo:     "img/creador/pequena-rojo.jpg",
+        rosado:   "img/creador/pequena-rosado.jpg",
+        morado:   "img/creador/pequena-morado.jpg",
+        azul:     "img/creador/pequena-azul.jpg",
+        blanco:   "img/creador/pequena-blanco.jpg",
+      } },
     { id:"rosa",      nombre:"Rosa",         plural:"Rosas",           genero:"f", precio:3, imagen:"img/creador/rosa-rojo.jpg",
       fotosPorColor: {
         amarillo: "img/creador/rosa-amarillo.jpg",
